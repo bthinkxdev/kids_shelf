@@ -1,0 +1,606 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}{{ product.name }} - Kids Shelf{% endblock %}
+{% block meta_description %}{{ product.name }} by {{ product.author }}. {{ product.description|truncatechars:150 }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Product Detail Page - Book Focus */
+    .product-detail {
+        padding: var(--space-11) 0;
+        background: var(--white);
+    }
+    
+    .product-detail-container {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: var(--space-10);
+        max-width: var(--container-max);
+        margin: 0 auto;
+    }
+    
+    /* Gallery Section */
+    .product-gallery {
+        position: sticky;
+        top: 100px;
+        height: fit-content;
+    }
+    
+    .main-image {
+        width: 100%;
+        aspect-ratio: 3/4;
+        border-radius: var(--radius-2xl);
+        overflow: hidden;
+        border: 4px solid var(--secondary);
+        box-shadow: var(--shadow-xl);
+        background: var(--gradient-soft);
+        margin-bottom: var(--space-5);
+        transition: all var(--transition-base);
+    }
+    
+    .main-image:hover {
+        border-color: var(--primary);
+        transform: scale(1.02);
+    }
+    
+    .main-image img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    
+    .image-thumbnails {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: var(--space-3);
+    }
+    
+    .image-thumbnail {
+        aspect-ratio: 3/4;
+        border-radius: var(--radius-md);
+        overflow: hidden;
+        border: 3px solid var(--gray-200);
+        cursor: pointer;
+        transition: all var(--transition-bounce);
+        background: var(--soft-gray);
+    }
+    
+    .image-thumbnail:hover,
+    .image-thumbnail.active {
+        border-color: var(--primary);
+        transform: scale(1.08);
+        box-shadow: var(--shadow-md);
+    }
+    
+    .image-thumbnail img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    
+    /* Product Details Content */
+    .product-details-content h1 {
+        font-family: var(--font-display);
+        font-size: clamp(32px, 4vw, 42px);
+        font-weight: 800;
+        color: var(--black);
+        line-height: 1.2;
+        margin-bottom: var(--space-4);
+    }
+    
+    .book-meta {
+        margin: var(--space-4) 0;
+        padding: var(--space-4) 0;
+        border-bottom: 2px dashed var(--secondary);
+    }
+    
+    .book-author {
+        font-size: 20px;
+        font-weight: 600;
+        color: var(--primary);
+        margin-bottom: var(--space-2);
+    }
+    
+    .book-illustrator {
+        font-size: 16px;
+        color: var(--gray-600);
+        font-style: italic;
+    }
+    
+    .product-rating {
+        display: flex;
+        align-items: center;
+        gap: var(--space-3);
+        margin: var(--space-5) 0;
+        padding: var(--space-4);
+        background: var(--primary-light);
+        border-radius: var(--radius-xl);
+    }
+    
+    .stars {
+        font-size: 20px;
+    }
+    
+    .rating-count {
+        font-size: 14px;
+        color: var(--gray-700);
+        font-weight: 600;
+    }
+    
+    .product-price-section {
+        margin: var(--space-6) 0;
+    }
+    
+    .price-row {
+        display: flex;
+        align-items: baseline;
+        gap: var(--space-3);
+    }
+    
+    .current-price {
+        font-family: var(--font-display);
+        font-size: 42px;
+        font-weight: 800;
+        color: var(--primary);
+    }
+    
+    /* Book Details Box */
+    .book-details {
+        background: linear-gradient(135deg, var(--primary-light) 0%, var(--lavender) 100%);
+        padding: var(--space-6);
+        border-radius: var(--radius-2xl);
+        margin: var(--space-6) 0;
+        border: 3px solid var(--secondary);
+    }
+    
+    .book-details h3 {
+        font-family: var(--font-display);
+        font-size: 18px;
+        font-weight: 700;
+        margin-bottom: var(--space-4);
+        color: var(--black);
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+    }
+    
+    .book-details h3::before {
+        content: '📖';
+        font-size: 24px;
+    }
+    
+    .book-details-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: var(--space-4);
+        font-size: 15px;
+    }
+    
+    .book-detail-item {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-1);
+    }
+    
+    .book-detail-label {
+        color: var(--gray-600);
+        font-size: 13px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .book-detail-value {
+        color: var(--black);
+        font-weight: 700;
+        font-size: 16px;
+    }
+    
+    /* Format Selector */
+    .format-selector {
+        margin: var(--space-7) 0;
+    }
+    
+    .format-selector label {
+        display: block;
+        font-family: var(--font-display);
+        font-size: 18px;
+        font-weight: 700;
+        color: var(--black);
+        margin-bottom: var(--space-4);
+    }
+    
+    .format-options {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: var(--space-3);
+    }
+    
+    .format-option {
+        padding: var(--space-5);
+        background: var(--white);
+        border: 3px solid var(--gray-200);
+        border-radius: var(--radius-xl);
+        text-align: center;
+        cursor: pointer;
+        transition: all var(--transition-bounce);
+        position: relative;
+    }
+    
+    .format-option:hover {
+        border-color: var(--secondary);
+        background: var(--soft-gray);
+        transform: translateY(-4px);
+    }
+    
+    .format-option.selected {
+        border-color: var(--primary);
+        background: var(--primary-light);
+        box-shadow: var(--shadow-lg);
+        transform: scale(1.05);
+    }
+    
+    .format-option.selected::before {
+        content: '✓';
+        position: absolute;
+        top: -8px;
+        right: -8px;
+        width: 28px;
+        height: 28px;
+        background: var(--success);
+        border-radius: var(--radius-full);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--black);
+        font-weight: 800;
+        font-size: 16px;
+        box-shadow: var(--shadow-md);
+    }
+    
+    .format-name {
+        font-family: var(--font-display);
+        font-weight: 700;
+        font-size: 17px;
+        color: var(--black);
+        margin-bottom: var(--space-2);
+    }
+    
+    .format-stock {
+        font-size: 13px;
+        color: var(--gray-600);
+        font-weight: 600;
+    }
+    
+    /* Quantity Selector */
+    .quantity-selector {
+        margin: var(--space-6) 0;
+    }
+    
+    .quantity-selector label {
+        display: block;
+        font-family: var(--font-display);
+        font-size: 18px;
+        font-weight: 700;
+        color: var(--black);
+        margin-bottom: var(--space-4);
+    }
+    
+    .quantity-input {
+        width: 120px;
+        padding: var(--space-4);
+        font-size: 18px;
+        font-weight: 700;
+        text-align: center;
+        border: 3px solid var(--secondary);
+        border-radius: var(--radius-xl);
+        background: var(--white);
+        color: var(--black);
+        transition: all var(--transition-base);
+    }
+    
+    .quantity-input:focus {
+        outline: none;
+        border-color: var(--primary);
+        box-shadow: 0 0 0 4px var(--primary-light);
+    }
+    
+    /* Action Buttons */
+    .action-buttons {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-4);
+        margin: var(--space-7) 0;
+    }
+    
+    /* Product Description */
+    .product-description {
+        margin-top: var(--space-8);
+        padding: var(--space-6);
+        background: var(--soft-gray);
+        border-radius: var(--radius-2xl);
+        border: 3px solid var(--mint);
+    }
+    
+    .product-description h3 {
+        font-family: var(--font-display);
+        font-size: 24px;
+        font-weight: 700;
+        color: var(--black);
+        margin-bottom: var(--space-4);
+    }
+    
+    .product-description p {
+        font-size: 16px;
+        line-height: 1.8;
+        color: var(--gray-700);
+    }
+    
+    /* Related Products Section */
+    .section-featured {
+        background: var(--gradient-soft);
+        padding: var(--space-11) 0;
+    }
+    
+    /* Responsive */
+    @media (max-width: 768px) {
+        .product-detail-container {
+            grid-template-columns: 1fr;
+            gap: var(--space-7);
+        }
+        
+        .product-gallery {
+            position: relative;
+            top: 0;
+        }
+        
+        .format-options {
+            grid-template-columns: 1fr;
+        }
+        
+        .book-details-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+    <section class="product-detail">
+        <div class="container">
+            <div class="product-detail-container">
+                <!-- Gallery -->
+                <div class="product-gallery">
+                    <div class="main-image">
+                        {% with image=product.images.first %}
+                            {% if image %}
+                                <img src="{{ image.image.url }}" alt="{{ product.name }}" id="mainImage">
+                            {% else %}
+                                <img src="{% static 'images/banner.png' %}" alt="{{ product.name }}" id="mainImage">
+                            {% endif %}
+                        {% endwith %}
+                    </div>
+                    <div class="image-thumbnails">
+                        {% for image in product.images.all %}
+                            <div class="image-thumbnail {% if forloop.first %}active{% endif %}" data-src="{{ image.image.url }}">
+                                <img src="{{ image.image.url }}" alt="{{ product.name }}">
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Product Details -->
+                <div class="product-details-content">
+                    <h1>{{ product.name }}</h1>
+                    
+                    <div class="book-meta">
+                        <p class="book-author">by {{ product.author }}</p>
+                        {% if product.illustrator %}
+                            <p class="book-illustrator">Illustrated by {{ product.illustrator }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div class="product-rating">
+                        <div class="stars">⭐⭐⭐⭐⭐</div>
+                        <span class="rating-count">(4.8 / 5) 256 reviews</span>
+                    </div>
+
+                    <div class="product-price-section">
+                        <div class="price-row">
+                            {% if product.original_price and product.original_price > product.price %}
+                                <span class="original-price">₹{{ product.original_price }}</span>
+                                <span class="current-price">₹{{ product.price }}</span>
+                                {% if product.discount_percent > 0 %}
+                                    <span class="discount-badge">{{ product.discount_percent }}% OFF</span>
+                                {% endif %}
+                            {% else %}
+                                <span class="current-price">₹{{ product.price }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Book Details Box -->
+                    <div class="book-details">
+                        <h3>Book Details</h3>
+                        <div class="book-details-grid">
+                            {% if product.age_group %}
+                                <div class="book-detail-item">
+                                    <span class="book-detail-label">👶 Age Group</span>
+                                    <span class="book-detail-value">{{ product.get_age_group_display }}</span>
+                                </div>
+                            {% endif %}
+                            {% if product.page_count %}
+                                <div class="book-detail-item">
+                                    <span class="book-detail-label">📄 Pages</span>
+                                    <span class="book-detail-value">{{ product.page_count }}</span>
+                                </div>
+                            {% endif %}
+                            {% if product.publisher %}
+                                <div class="book-detail-item">
+                                    <span class="book-detail-label">🏢 Publisher</span>
+                                    <span class="book-detail-value">{{ product.publisher }}</span>
+                                </div>
+                            {% endif %}
+                            {% if product.publication_year %}
+                                <div class="book-detail-item">
+                                    <span class="book-detail-label">📅 Year</span>
+                                    <span class="book-detail-value">{{ product.publication_year }}</span>
+                                </div>
+                            {% endif %}
+                            {% if product.language %}
+                                <div class="book-detail-item">
+                                    <span class="book-detail-label">🌍 Language</span>
+                                    <span class="book-detail-value">{{ product.language }}</span>
+                                </div>
+                            {% endif %}
+                            {% if product.isbn %}
+                                <div class="book-detail-item" style="grid-column: 1 / -1;">
+                                    <span class="book-detail-label">🔢 ISBN</span>
+                                    <span class="book-detail-value">{{ product.isbn }}</span>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    {% if formats %}
+                    <form method="post" action="{% url 'store:cart_add' %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="product_id" value="{{ product.id }}">
+                        <input type="hidden" name="format_type" id="selectedFormat" value="{% if formats %}{{ formats.0.format_type }}{% endif %}">
+
+                        <!-- Format Selector -->
+                        <div class="format-selector">
+                            <label>📚 Choose Format</label>
+                            <div class="format-options">
+                                {% for format in formats %}
+                                    <div class="format-option {% if forloop.first %}selected{% endif %}" 
+                                         data-format="{{ format.format_type }}"
+                                         data-stock="{{ format.stock_quantity }}">
+                                        <div class="format-name">{{ format.get_format_type_display }}</div>
+                                        <div class="format-stock">{{ format.stock_quantity }} in stock</div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <!-- Quantity -->
+                        <div class="quantity-selector">
+                            <label>🔢 Quantity</label>
+                            <input type="number" class="quantity-input" name="quantity" value="1" min="1" max="10">
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="action-buttons">
+                            <button class="btn btn-primary" type="submit" name="action" value="add">
+                                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M9 2L7.17 4M16.84 4L15 2M12 10V14M8 14H16M6 8H18C19.1046 8 20 8.89543 20 10V18C20 19.1046 19.1046 20 18 20H6C4.89543 20 4 19.1046 4 18V10C4 8.89543 4.89543 8 6 8Z"/>
+                                </svg>
+                                <span>Add to Cart</span>
+                            </button>
+                            <button class="btn btn-secondary" type="submit" name="action" value="buy">
+                                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                                </svg>
+                                <span>Buy Now</span>
+                            </button>
+                            <button class="btn btn-whatsapp" type="submit" name="action" value="whatsapp">
+                                <svg class="btn-icon" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.520.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.520-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.500-.669-.510-.173-.008-.371-.010-.570-.010-.198 0-.520.074-.792.372-.272.297-1.040 1.016-1.040 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.200 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.360.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.570-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.510-5.260c.001-5.450 4.436-9.884 9.888-9.884 2.64 0 5.122 1.030 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.450-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.050 0C5.495 0 .160 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.890-5.335 11.893-11.893a11.821 11.821 0 00-3.480-8.413z"/>
+                                </svg>
+                                <span>Order via WhatsApp</span>
+                            </button>
+                        </div>
+                    </form>
+                    {% else %}
+                        <div class="notification error" style="position: relative; opacity: 1;">
+                            This book is currently out of stock.
+                        </div>
+                    {% endif %}
+
+                    <!-- Description -->
+                    <div class="product-description">
+                        <h3>About This Book</h3>
+                        <p>{{ product.description }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Related Products -->
+    <section class="section section-featured">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">You May Also Like</h2>
+                <p class="section-subtitle">More magical stories await! 📚✨</p>
+            </div>
+            <div class="product-grid">
+                {% for related in related_products %}
+                    <div class="product-card">
+                        <a href="{% url 'store:product_detail' related.slug %}" class="product-link">
+                            <div class="product-image">
+                                {% with image=related.images.first %}
+                                    {% if image %}
+                                        <img src="{{ image.image.url }}" alt="{{ related.name }}" loading="lazy">
+                                    {% else %}
+                                        <img src="{% static 'images/banner.png' %}" alt="{{ related.name }}" loading="lazy">
+                                    {% endif %}
+                                {% endwith %}
+                                {% if related.age_group %}
+                                    <span class="age-badge">{{ related.get_age_group_display }}</span>
+                                {% endif %}
+                            </div>
+                            <div class="product-info">
+                                <h3 class="product-name">{{ related.name }}</h3>
+                                <p class="product-author">by {{ related.author }}</p>
+                                <div class="product-price">
+                                    {% if related.original_price and related.original_price > related.price %}
+                                        <span class="original-price">₹{{ related.original_price }}</span>
+                                        <span class="current-price">₹{{ related.price }}</span>
+                                        {% if related.discount_percent > 0 %}
+                                            <span class="discount-badge">{{ related.discount_percent }}% OFF</span>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="current-price">₹{{ related.price }}</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </a>
+                        <button class="add-to-cart-btn" onclick="location.href='{% url 'store:product_detail' related.slug %}'">View Details</button>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    </section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Image gallery
+    document.querySelectorAll('.image-thumbnail').forEach((thumb) => {
+        thumb.addEventListener('click', () => {
+            const mainImage = document.getElementById('mainImage');
+            mainImage.src = thumb.dataset.src;
+            document.querySelectorAll('.image-thumbnail').forEach((item) => item.classList.remove('active'));
+            thumb.classList.add('active');
+        });
+    });
+
+    // Format selector
+    document.querySelectorAll('.format-option').forEach((option) => {
+        option.addEventListener('click', () => {
+            document.querySelectorAll('.format-option').forEach((item) => item.classList.remove('selected'));
+            option.classList.add('selected');
+            document.getElementById('selectedFormat').value = option.dataset.format;
+            
+            // Update quantity max based on stock
+            const stock = parseInt(option.dataset.stock);
+            const quantityInput = document.querySelector('.quantity-input');
+            quantityInput.max = Math.min(stock, 10);
+            if (parseInt(quantityInput.value) > stock) {
+                quantityInput.value = stock;
+            }
+        });
+    });
+</script>
+{% endblock %}

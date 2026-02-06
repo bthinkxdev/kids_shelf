@@ -1,0 +1,1112 @@
+{% extends "admin/base.html" %}
+{% load static %}
+
+{% block title %}{{ form_title }}{% endblock %}
+{% block page_title %}{{ form_title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Premium Product Form Styling */
+    .product-form-wrapper {
+        max-width: 1400px;
+        margin: 0 auto;
+    }
+    
+    .form-section {
+        background: var(--white);
+        border-radius: 16px;
+        padding: 2.5rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+        border: 1px solid var(--gray-200);
+        transition: all 0.3s ease;
+    }
+    
+    .form-section:hover {
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+        border-color: var(--primary);
+    }
+    
+    .section-header {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 2rem;
+        padding-bottom: 1.25rem;
+        border-bottom: 3px solid var(--gray-100);
+        position: relative;
+    }
+    
+    .section-header::after {
+        content: '';
+        position: absolute;
+        bottom: -3px;
+        left: 0;
+        width: 80px;
+        height: 3px;
+        background: linear-gradient(90deg, var(--primary) 0%, var(--accent) 100%);
+        border-radius: 3px;
+    }
+    
+    .section-icon {
+        width: 48px;
+        height: 48px;
+        background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--white);
+        font-size: 1.5rem;
+        box-shadow: 0 4px 12px rgba(109, 76, 65, 0.3);
+    }
+    
+    .section-title {
+        flex: 1;
+    }
+    
+    .section-title h4 {
+        margin: 0;
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--gray-900);
+        letter-spacing: -0.5px;
+    }
+    
+    .section-subtitle {
+        margin: 0.25rem 0 0;
+        font-size: 0.875rem;
+        color: var(--gray-500);
+        font-weight: 400;
+    }
+    
+    .section-badge {
+        padding: 0.5rem 1rem;
+        background: linear-gradient(135deg, #FFF3E0 0%, #FFE0B2 100%);
+        border-radius: 8px;
+        font-size: 0.8125rem;
+        font-weight: 600;
+        color: #E65100;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        border: 1px solid #FFB74D;
+    }
+    
+    /* Premium Form Inputs */
+    .form-group {
+        margin-bottom: 1.75rem;
+    }
+    
+    .form-label {
+        display: block;
+        margin-bottom: 0.625rem;
+        font-weight: 600;
+        color: var(--gray-800);
+        font-size: 0.9375rem;
+        letter-spacing: 0.01em;
+    }
+    
+    .form-label small {
+        font-weight: 400;
+        color: var(--gray-500);
+    }
+    
+    .form-control {
+        width: 100%;
+        padding: 0.875rem 1rem;
+        border: 2px solid var(--gray-200);
+        border-radius: 10px;
+        font-size: 0.9375rem;
+        font-family: inherit;
+        transition: all 0.3s ease;
+        background: var(--white);
+    }
+    
+    .form-control:hover {
+        border-color: var(--gray-300);
+    }
+    
+    .form-control:focus {
+        outline: none;
+        border-color: var(--primary);
+        box-shadow: 0 0 0 4px rgba(109, 76, 65, 0.1);
+        background: var(--white);
+    }
+    
+    textarea.form-control {
+        min-height: 120px;
+        resize: vertical;
+        line-height: 1.6;
+    }
+    
+    /* Checkbox Styling */
+    .form-check {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 1rem;
+        background: var(--gray-50);
+        border-radius: 10px;
+        border: 2px solid transparent;
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+    
+    .form-check:hover {
+        background: #FFF3E0;
+        border-color: var(--primary-light);
+    }
+    
+    .form-check-input {
+        width: 20px;
+        height: 20px;
+        cursor: pointer;
+        accent-color: var(--primary);
+    }
+    
+    .form-check-label {
+        cursor: pointer;
+        font-size: 0.9375rem;
+        font-weight: 500;
+        color: var(--gray-800);
+        margin: 0;
+    }
+    
+    /* Formset Container Styling */
+    .formset-container {
+        background: linear-gradient(135deg, #FAFAFA 0%, #F5F5F5 100%);
+        border: 2px dashed var(--gray-300);
+        border-radius: 16px;
+        padding: 1.5rem;
+        margin-top: 1.5rem;
+    }
+    
+    .formset-form {
+        padding: 1.75rem;
+        background: var(--white);
+        border-radius: 12px;
+        margin-bottom: 1.25rem;
+        position: relative;
+        border: 2px solid var(--gray-200);
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+    }
+    
+    .formset-form:hover {
+        border-color: var(--primary);
+        box-shadow: 0 4px 12px rgba(109, 76, 65, 0.15);
+        transform: translateY(-2px);
+    }
+    
+    .formset-form.deleted {
+        opacity: 0.4;
+        border-color: var(--danger);
+        background: linear-gradient(135deg, #FFEBEE 0%, #FFCDD2 100%);
+        transform: scale(0.98);
+    }
+    
+    .formset-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
+        border-bottom: 2px solid var(--gray-100);
+    }
+    
+    .formset-number {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        font-weight: 700;
+        color: var(--primary);
+        font-size: 1.125rem;
+    }
+    
+    .formset-number i {
+        width: 36px;
+        height: 36px;
+        background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--white);
+        font-size: 0.875rem;
+    }
+    
+    .formset-delete {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        z-index: 10;
+    }
+    
+    .add-formset-btn {
+        margin-top: 1.25rem;
+        width: 100%;
+        padding: 1rem 1.5rem;
+        font-size: 1rem;
+        font-weight: 600;
+        border: 2px dashed var(--primary);
+        background: var(--white);
+        color: var(--primary);
+        border-radius: 12px;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+    }
+    
+    .add-formset-btn:hover {
+        background: var(--primary);
+        color: var(--white);
+        border-style: solid;
+        box-shadow: 0 6px 16px rgba(109, 76, 65, 0.3);
+        transform: translateY(-2px);
+    }
+    
+    /* Image Preview Styling */
+    .image-preview {
+        margin-top: 1rem;
+        padding: 1rem;
+        background: var(--gray-50);
+        border-radius: 10px;
+        border: 2px solid var(--gray-200);
+    }
+    
+    .image-preview img {
+        max-width: 180px;
+        max-height: 180px;
+        object-fit: cover;
+        border-radius: 10px;
+        border: 3px solid var(--white);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        transition: all 0.3s ease;
+    }
+    
+    .image-preview img:hover {
+        transform: scale(1.05);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+    }
+    
+    /* Grid Layout Enhancement */
+    .grid-2 {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 1.5rem;
+    }
+    
+    /* Button Enhancements */
+    .btn {
+        padding: 0.875rem 1.75rem;
+        font-weight: 600;
+        font-size: 0.9375rem;
+        border-radius: 10px;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+        letter-spacing: 0.02em;
+    }
+    
+    .btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+    }
+    
+    .btn:active {
+        transform: translateY(0);
+    }
+    
+    .btn-primary {
+        background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+    }
+    
+    .btn-primary:hover {
+        background: linear-gradient(135deg, var(--primary-dark) 0%, #4E342E 100%);
+    }
+    
+    .btn-sm {
+        padding: 0.5rem 1.125rem;
+        font-size: 0.875rem;
+    }
+    
+    /* Action Buttons Container */
+    .form-actions {
+        display: flex;
+        gap: 1rem;
+        justify-content: flex-end;
+        margin-top: 3rem;
+        padding-top: 2rem;
+        border-top: 2px solid var(--gray-100);
+    }
+    
+    /* Empty State for Formsets */
+    .formset-empty-state {
+        text-align: center;
+        padding: 3rem 2rem;
+        color: var(--gray-500);
+    }
+    
+    .formset-empty-state i {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        opacity: 0.3;
+    }
+    
+    /* Responsive Adjustments */
+    @media (max-width: 768px) {
+        .form-section {
+            padding: 1.5rem;
+        }
+        
+        .section-header {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        
+        .section-badge {
+            width: 100%;
+            justify-content: center;
+        }
+        
+        .grid-2 {
+            grid-template-columns: 1fr;
+        }
+        
+        .formset-form {
+            padding: 1.25rem;
+        }
+        
+        .form-actions {
+            flex-direction: column-reverse;
+        }
+        
+        .form-actions .btn {
+            width: 100%;
+        }
+    }
+    
+    /* File Input Styling */
+    input[type="file"].form-control {
+        padding: 0.75rem;
+        cursor: pointer;
+    }
+    
+    input[type="file"].form-control::file-selector-button {
+        padding: 0.5rem 1rem;
+        background: var(--primary);
+        color: var(--white);
+        border: none;
+        border-radius: 6px;
+        margin-right: 1rem;
+        cursor: pointer;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    
+    input[type="file"].form-control::file-selector-button:hover {
+        background: var(--primary-dark);
+    }
+    
+    /* Success/Info Badges */
+    .info-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1rem;
+        background: #E3F2FD;
+        color: #1565C0;
+        border-radius: 8px;
+        font-size: 0.8125rem;
+        font-weight: 600;
+        border: 1px solid #90CAF9;
+    }
+    .age-groups-checkboxes label {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .age-groups-checkboxes label:hover {
+        background-color: #f8f9fa;
+        border-color: #007bff;
+    }
+
+    .age-groups-checkboxes input[type="checkbox"]:checked + label,
+    .age-groups-checkboxes label:has(input:checked) {
+        background-color: #e7f3ff;
+        border-color: #007bff;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="product-form-wrapper">
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        
+        <!-- Basic Information Section -->
+        <div class="form-section">
+            <div class="section-header">
+                <div class="section-icon">
+                    <i class="fas fa-info-circle"></i>
+                </div>
+                <div class="section-title">
+                    <h4>Book Information</h4>
+                    <p class="section-subtitle">Essential book details, author, and pricing</p>
+                </div>
+            </div>
+            
+            <div class="grid-2">
+                <div class="form-group">
+                    <label class="form-label">Book Title *</label>
+                    {{ form.name }}
+                    {% if form.name.errors %}
+                        <div style="color: var(--danger); font-size: 0.875rem; margin-top: 0.25rem;">
+                            {{ form.name.errors }}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Category *</label>
+                    {{ form.category }}
+                    {% if form.category.errors %}
+                        <div style="color: var(--danger); font-size: 0.875rem; margin-top: 0.25rem;">
+                            {{ form.category.errors }}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="grid-2">
+                <div class="form-group">
+                    <label class="form-label">Author *</label>
+                    {{ form.author }}
+                    {% if form.author.errors %}
+                        <div style="color: var(--danger); font-size: 0.875rem; margin-top: 0.25rem;">
+                            {{ form.author.errors }}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Illustrator <small>(optional)</small></label>
+                    {{ form.illustrator }}
+                    {% if form.illustrator.errors %}
+                        <div style="color: var(--danger); font-size: 0.875rem; margin-top: 0.25rem;">
+                            {{ form.illustrator.errors }}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="grid-2">
+                <div class="form-group">
+                    <label class="form-label">Publisher</label>
+                    {{ form.publisher }}
+                    {% if form.publisher.errors %}
+                        <div style="color: var(--danger); font-size: 0.875rem; margin-top: 0.25rem;">
+                            {{ form.publisher.errors }}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Publication Year</label>
+                    {{ form.publication_year }}
+                    {% if form.publication_year.errors %}
+                        <div style="color: var(--danger); font-size: 0.875rem; margin-top: 0.25rem;">
+                            {{ form.publication_year.errors }}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="grid-2">
+                <div class="form-group">
+                    <label class="form-label">ISBN-13 <small>(13 digits)</small></label>
+                    {{ form.isbn }}
+                    {% if form.isbn.errors %}
+                        <div style="color: var(--danger); font-size: 0.875rem; margin-top: 0.25rem;">
+                            {{ form.isbn.errors }}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Age Groups</label>
+                    <small class="text-muted d-block mb-2">
+                        Select all applicable age groups. Leave empty for "All Ages"
+                    </small>
+                    
+                    {% for checkbox in form.age_groups %}
+                    <div class="form-check">
+                        {{ checkbox.tag }}
+                        <label class="form-check-label" for="{{ checkbox.id_for_label }}">
+                            {{ checkbox.choice_label }}
+                        </label>
+                    </div>
+                    {% endfor %}
+                    
+                    {% if form.age_groups.errors %}
+                        <div class="text-danger small mt-1">
+                            {{ form.age_groups.errors }}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="grid-2">
+                <div class="form-group">
+                    <label class="form-label">Page Count</label>
+                    {{ form.page_count }}
+                    {% if form.page_count.errors %}
+                        <div style="color: var(--danger); font-size: 0.875rem; margin-top: 0.25rem;">
+                            {{ form.page_count.errors }}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Language</label>
+                    {{ form.language }}
+                    {% if form.language.errors %}
+                        <div style="color: var(--danger); font-size: 0.875rem; margin-top: 0.25rem;">
+                            {{ form.language.errors }}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Slug (optional - auto-generated)</label>
+                {{ form.slug }}
+                {% if form.slug.errors %}
+                    <div style="color: var(--danger); font-size: 0.875rem; margin-top: 0.25rem;">
+                        {{ form.slug.errors }}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Description</label>
+                {{ form.description }}
+                {% if form.description.errors %}
+                    <div style="color: var(--danger); font-size: 0.875rem; margin-top: 0.25rem;">
+                        {{ form.description.errors }}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Price (₹) *</label>
+                {{ form.price }}
+                {% if form.price.errors %}
+                    <div style="color: var(--danger); font-size: 0.875rem; margin-top: 0.25rem;">
+                        {{ form.price.errors }}
+                    </div>
+                {% endif %}
+            </div>
+           <div class="form-group">
+                <label class="form-label">Original Price / MRP (₹)</label>
+                {{ form.original_price }}
+                {% if form.original_price.errors %}
+                    <div style="color: var(--danger); font-size: 0.875rem; margin-top: 0.25rem;">
+                        {{ form.original_price.errors }}
+                    </div>
+                {% endif %}
+                <small style="color: var(--text-muted, #6c757d); font-size: 0.875rem; display: block; margin-top: 0.25rem;">
+                    Optional: Leave empty if no discount. Display struck-through if selling below MRP.
+                </small>
+            </div>
+
+            <div class="grid-2">
+                <div class="form-check">
+                    {{ form.is_featured }}
+                    <label class="form-check-label" for="{{ form.is_featured.id_for_label }}">
+                        <strong>⭐ Featured Book</strong>
+                        <small style="display: block; color: var(--gray-600); font-weight: 400;">Show on homepage</small>
+                    </label>
+                </div>
+
+                <div class="form-check">
+                    {{ form.is_bestseller }}
+                    <label class="form-check-label" for="{{ form.is_bestseller.id_for_label }}">
+                        <strong>🔥 Bestseller</strong>
+                        <small style="display: block; color: var(--gray-600); font-weight: 400;">Highlight as top seller</small>
+                    </label>
+                </div>
+
+                <div class="form-check">
+                    {{ form.is_active }}
+                    <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
+                        <strong>✅ Active</strong>
+                        <small style="display: block; color: var(--gray-600); font-weight: 400;">Available for purchase</small>
+                    </label>
+                </div>
+            </div>
+        
+        <!-- Product Images Section -->
+        <div class="form-section">
+            <div class="section-header">
+                <div class="section-icon">
+                    <i class="fas fa-images"></i>
+                </div>
+                <div class="section-title">
+                    <h4>Book Cover & Images</h4>
+                    <p class="section-subtitle">Upload book cover and interior preview images</p>
+                </div>
+                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                    <span class="section-badge">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        Max 5 images
+                    </span>
+                    <span class="info-badge">
+                        <i class="fas fa-file-image"></i>
+                        Max 5MB per image
+                    </span>
+                </div>
+            </div>
+            
+            {{ image_formset.management_form }}
+            <div id="image-formset" class="formset-container">
+                {% for form in image_formset %}
+                    <div class="formset-form image-form" data-form-index="{{ forloop.counter0 }}">
+                        <div class="formset-header">
+                            <span class="formset-number">
+                                <i class="fas fa-image"></i>
+                                <span>Image #<span class="form-number">{{ forloop.counter }}</span></span>
+                            </span>
+                            <div class="formset-delete">
+                                {% if form.instance.pk %}
+                                    {{ form.DELETE }}
+                                    <label for="{{ form.DELETE.id_for_label }}" class="btn btn-sm btn-danger" style="cursor: pointer; margin: 0;">
+                                        <i class="fas fa-trash"></i> Remove
+                                    </label>
+                                {% else %}
+                                    <button type="button" class="btn btn-sm btn-danger remove-form-btn">
+                                        <i class="fas fa-times"></i> Remove
+                                    </button>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">
+                                Select Image 
+                                <small style="color: var(--gray-500);">(Max 5MB, JPG/PNG/GIF/WebP)</small>
+                            </label>
+                            {{ form.image }}
+                        </div>
+                        
+                        {% if form.instance.image %}
+                            <div class="image-preview">
+                                <img src="{{ form.instance.image.url }}" alt="Current image">
+                            </div>
+                        {% endif %}
+                        
+                        <div class="grid-2">
+                            <div class="form-group">
+                                <label class="form-label">Alt Text <small>(optional for SEO)</small></label>
+                                {{ form.alt_text }}
+                            </div>
+                            
+                            <div class="form-check">
+                                {{ form.is_primary }}
+                                <label class="form-check-label" for="{{ form.is_primary.id_for_label }}">
+                                    <strong>⭐ Primary Image</strong>
+                                    <small style="display: block; color: var(--gray-600); font-weight: 400;">Show first in product listing</small>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        {{ form.id }}
+                    </div>
+                {% endfor %}
+            </div>
+            
+            <button type="button" id="add-image-btn" class="btn btn-secondary add-formset-btn">
+                <i class="fas fa-plus-circle"></i> Add Another Image
+            </button>
+        </div>
+        
+        <!-- Book Formats Section -->
+        <div class="form-section">
+            <div class="section-header">
+                <div class="section-icon">
+                    <i class="fas fa-book"></i>
+                </div>
+                <div class="section-title">
+                    <h4>Book Formats</h4>
+                    <p class="section-subtitle">Define available formats and inventory</p>
+                </div>
+                <span class="info-badge">
+                    <i class="fas fa-info-circle"></i>
+                    Required: At least 1 format
+                </span>
+            </div>
+            
+            {{ format_formset.management_form }}
+            <div id="format-formset" class="formset-container">
+                {% for form in format_formset %}
+                    <div class="formset-form format-form" data-form-index="{{ forloop.counter0 }}">
+                        <div class="formset-header">
+                            <span class="formset-number">
+                                <i class="fas fa-book-open"></i>
+                                <span>Format #<span class="form-number">{{ forloop.counter }}</span></span>
+                            </span>
+                            <div class="formset-delete">
+                                {% if form.instance.pk %}
+                                    {{ form.DELETE }}
+                                    <label for="{{ form.DELETE.id_for_label }}" class="btn btn-sm btn-danger" style="cursor: pointer; margin: 0;">
+                                        <i class="fas fa-trash"></i> Remove
+                                    </label>
+                                {% else %}
+                                    <button type="button" class="btn btn-sm btn-danger remove-form-btn">
+                                        <i class="fas fa-times"></i> Remove
+                                    </button>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="grid-2">
+                            <div class="form-group">
+                                <label class="form-label">SKU * <small style="color: var(--gray-500);">(e.g., ISBN-HB)</small></label>
+                                {{ form.sku }}
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">Format Type *</label>
+                                {{ form.format_type }}
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">Stock Quantity *</label>
+                                {{ form.stock_quantity }}
+                            </div>
+                        </div>
+                        
+                        <div class="form-check">
+                            {{ form.is_active }}
+                            <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
+                                <strong>✅ Active Format</strong>
+                                <small style="display: block; color: var(--gray-600); font-weight: 400;">Available for customers to purchase</small>
+                            </label>
+                        </div>
+                        
+                        {{ form.id }}
+                    </div>
+                {% endfor %}
+            </div>
+            
+            <button type="button" id="add-format-btn" class="btn btn-secondary add-formset-btn">
+                <i class="fas fa-plus-circle"></i> Add Another Format
+            </button>
+        </div>
+
+        <!-- Form Actions -->
+        <div class="form-actions">
+            <a href="{% url 'admin_panel:product_list' %}" class="btn btn-secondary">
+                <i class="fas fa-times-circle"></i> Cancel
+            </a>
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-check-circle"></i> Save Product
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // File size validation constants
+    const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB in bytes
+    
+    // Helper function to format file size
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+    }
+    
+    // Validate file size
+    function validateFileSize(fileInput) {
+        const file = fileInput.files[0];
+        if (file) {
+            if (file.size > MAX_FILE_SIZE) {
+                alert(`Image file size cannot exceed 5MB.\n\nSelected file: ${file.name}\nFile size: ${formatFileSize(file.size)}\n\nPlease choose a smaller image or compress it before uploading.`);
+                fileInput.value = '';
+                return false;
+            }
+            
+            if (!file.type.startsWith('image/')) {
+                alert(`Please upload a valid image file.\n\nSelected file: ${file.name}\nFile type: ${file.type}\n\nAccepted formats: JPG, PNG, GIF, WebP`);
+                fileInput.value = '';
+                return false;
+            }
+        }
+        return true;
+    }
+    
+    // Helper function to update form numbers
+    function updateFormNumbers(container, className) {
+        const forms = container.querySelectorAll('.' + className + ':not(.deleted)');
+        forms.forEach((form, index) => {
+            const numberSpan = form.querySelector('.form-number');
+            if (numberSpan) {
+                numberSpan.textContent = index + 1;
+            }
+        });
+    }
+
+    // Slug auto-generation for book title
+    function initializeSlugAutoGeneration() {
+        const nameInput = document.getElementById('{{ form.name.id_for_label }}');
+        const slugInput = document.getElementById('{{ form.slug.id_for_label }}');
+        
+        if (nameInput && slugInput) {
+            let slugManuallyModified = false;
+            
+            function generateSlug(text) {
+                if (!text) return '';
+                
+                return text
+                    .toString()
+                    .toLowerCase()
+                    .trim()
+                    .replace(/[^\w\s-]/g, '') 
+                    .replace(/[\s_-]+/g, '-') 
+                    .replace(/^-+|-+$/g, ''); 
+            }
+            
+            nameInput.addEventListener('input', function() {
+                if (!slugManuallyModified) {
+                    slugInput.value = generateSlug(this.value);
+                }
+            });
+            
+            slugInput.addEventListener('input', function() {
+                const generatedSlug = generateSlug(nameInput.value);
+                slugManuallyModified = this.value !== generatedSlug;
+            });
+            
+            if (nameInput.value && !slugInput.value) {
+                slugInput.value = generateSlug(nameInput.value);
+            }
+            
+            const form = nameInput.closest('form');
+            if (form) {
+                form.addEventListener('reset', function() {
+                    slugManuallyModified = false;
+                });
+            }
+        }
+    }
+
+    initializeSlugAutoGeneration();
+    
+    // Add file size validation to all existing file inputs
+    document.querySelectorAll('input[type="file"]').forEach(input => {
+        input.addEventListener('change', function() {
+            validateFileSize(this);
+        });
+    });
+
+    // Image Formset Management
+    const imageFormset = document.getElementById('image-formset');
+    const addImageBtn = document.getElementById('add-image-btn');
+    const imageTotalForms = document.querySelector('#id_images-TOTAL_FORMS');
+    const MAX_IMAGES = 5;
+
+    function checkImageLimit() {
+        const visibleForms = imageFormset.querySelectorAll('.image-form:not(.deleted)');
+        const formCount = visibleForms.length;
+        
+        if (formCount >= MAX_IMAGES) {
+            addImageBtn.style.display = 'none';
+        } else {
+            addImageBtn.style.display = 'block';
+        }
+        
+        const remaining = MAX_IMAGES - formCount;
+        if (remaining > 0) {
+            addImageBtn.innerHTML = `<i class="fas fa-plus-circle"></i> Add Another Image (${remaining} remaining)`;
+        }
+    }
+
+    if (addImageBtn && imageFormset && imageTotalForms) {
+        const imageEmptyForm = document.querySelector('.image-form:last-child');
+        
+        checkImageLimit();
+        
+        addImageBtn.addEventListener('click', function() {
+            const visibleForms = imageFormset.querySelectorAll('.image-form:not(.deleted)');
+            
+            if (visibleForms.length >= MAX_IMAGES) {
+                alert(`Maximum ${MAX_IMAGES} images allowed per product.`);
+                return;
+            }
+            
+            const formCount = parseInt(imageTotalForms.value);
+            const newForm = imageEmptyForm.cloneNode(true);
+            
+            const formHtml = newForm.innerHTML;
+            const updatedHtml = formHtml.replace(/__prefix__/g, formCount).replace(/images-\d+-/g, 'images-' + formCount + '-');
+            newForm.innerHTML = updatedHtml;
+            newForm.setAttribute('data-form-index', formCount);
+            
+            newForm.querySelectorAll('input[type="text"], input[type="file"]').forEach(input => {
+                input.value = '';
+            });
+            newForm.querySelectorAll('input[type="checkbox"]').forEach(input => {
+                input.checked = false;
+            });
+            
+            const preview = newForm.querySelector('.image-preview');
+            if (preview) preview.remove();
+            
+            const removeBtn = newForm.querySelector('.remove-form-btn');
+            if (removeBtn) {
+                removeBtn.addEventListener('click', function() {
+                    newForm.classList.add('deleted');
+                    newForm.style.display = 'none';
+                    updateFormNumbers(imageFormset, 'image-form');
+                    checkImageLimit();
+                });
+            }
+            
+            const fileInput = newForm.querySelector('input[type="file"]');
+            if (fileInput) {
+                fileInput.addEventListener('change', function() {
+                    validateFileSize(this);
+                });
+            }
+            
+            imageFormset.appendChild(newForm);
+            imageTotalForms.value = formCount + 1;
+            updateFormNumbers(imageFormset, 'image-form');
+            checkImageLimit();
+            
+            newForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        });
+
+        imageFormset.querySelectorAll('.remove-form-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const form = btn.closest('.formset-form');
+                form.classList.add('deleted');
+                form.style.display = 'none';
+                updateFormNumbers(imageFormset, 'image-form');
+                checkImageLimit();
+            });
+        });
+
+        imageFormset.querySelectorAll('input[id$="-DELETE"]').forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                const form = this.closest('.formset-form');
+                if (this.checked) {
+                    form.classList.add('deleted');
+                } else {
+                    form.classList.remove('deleted');
+                }
+                checkImageLimit();
+            });
+        });
+    }
+
+    // Format Formset Management (CHANGED FROM VARIANT)
+    const formatFormset = document.getElementById('format-formset');
+    const addFormatBtn = document.getElementById('add-format-btn');
+    const formatTotalForms = document.querySelector('#id_formats-TOTAL_FORMS');
+
+    if (addFormatBtn && formatFormset && formatTotalForms) {
+        const formatEmptyForm = document.querySelector('.format-form:last-child');
+        
+        addFormatBtn.addEventListener('click', function() {
+            const formCount = parseInt(formatTotalForms.value);
+            const newForm = formatEmptyForm.cloneNode(true);
+            
+            const formHtml = newForm.innerHTML;
+            const updatedHtml = formHtml.replace(/__prefix__/g, formCount).replace(/formats-\d+-/g, 'formats-' + formCount + '-');
+            newForm.innerHTML = updatedHtml;
+            newForm.setAttribute('data-form-index', formCount);
+            
+            newForm.querySelectorAll('input[type="text"], input[type="number"], select').forEach(input => {
+                input.value = '';
+            });
+            newForm.querySelectorAll('input[type="checkbox"]').forEach(input => {
+                if (input.id.includes('is_active')) {
+                    input.checked = true;
+                } else {
+                    input.checked = false;
+                }
+            });
+            
+            const removeBtn = newForm.querySelector('.remove-form-btn');
+            if (removeBtn) {
+                removeBtn.addEventListener('click', function() {
+                    newForm.classList.add('deleted');
+                    newForm.style.display = 'none';
+                    updateFormNumbers(formatFormset, 'format-form');
+                });
+            }
+            
+            formatFormset.appendChild(newForm);
+            formatTotalForms.value = formCount + 1;
+            updateFormNumbers(formatFormset, 'format-form');
+            
+            newForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        });
+
+        formatFormset.querySelectorAll('.remove-form-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const form = btn.closest('.formset-form');
+                form.classList.add('deleted');
+                form.style.display = 'none';
+                updateFormNumbers(formatFormset, 'format-form');
+            });
+        });
+
+        formatFormset.querySelectorAll('input[id$="-DELETE"]').forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                const form = this.closest('.formset-form');
+                if (this.checked) {
+                    form.classList.add('deleted');
+                } else {
+                    form.classList.remove('deleted');
+                }
+            });
+        });
+    }
+
+    // Form validation notification
+    const form = document.querySelector('form');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            const imageCount = imageFormset ? imageFormset.querySelectorAll('.image-form:not(.deleted)').length : 0;
+            const formatCount = formatFormset ? formatFormset.querySelectorAll('.format-form:not(.deleted)').length : 0;
+            
+            if (imageCount === 0) {
+                alert('Please add at least one book cover image.');
+                e.preventDefault();
+                return false;
+            }
+            
+            if (formatCount === 0) {
+                alert('Please add at least one book format (Hardcover, Paperback, etc.).');
+                e.preventDefault();
+                return false;
+            }
+        });
+    }
+});
+</script>
+{% endblock %}
+

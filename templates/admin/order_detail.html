@@ -1,0 +1,188 @@
+{% extends "admin/base.html" %}
+{% load static %}
+
+{% block title %}Order {{ order.order_number }}{% endblock %}
+{% block page_title %}
+    Order Details
+    <a href="{% url 'admin_panel:order_invoice' order.order_number %}" target="_blank" class="btn btn-primary" style="float: right; margin-left: 10px;">
+        🖨️ Print Invoice
+    </a>
+{% endblock %}
+
+{% block content %}
+<div class="grid-2">
+    <!-- Order Information -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">Order Information</h3>
+        </div>
+        <div class="card-body">
+            <div style="display: grid; gap: 1rem;">
+                <div>
+                    <div style="font-size: 0.875rem; color: var(--gray-600); margin-bottom: 0.25rem;">Order Number</div>
+                    <div style="font-weight: 600; font-size: 1.1rem;">{{ order.order_number }}</div>
+                </div>
+                
+                <div>
+                    <div style="font-size: 0.875rem; color: var(--gray-600); margin-bottom: 0.25rem;">Order Date</div>
+                    <div>{{ order.created_at|date:"d M, Y - h:i A" }}</div>
+                </div>
+                
+                <div>
+                    <div style="font-size: 0.875rem; color: var(--gray-600); margin-bottom: 0.25rem;">Status</div>
+                    <div>
+                        {% if order.status == 'placed' %}
+                            <span class="badge badge-info">{{ order.get_status_display }}</span>
+                        {% elif order.status == 'confirmed' %}
+                            <span class="badge badge-warning">{{ order.get_status_display }}</span>
+                        {% elif order.status == 'shipped' %}
+                            <span class="badge badge-secondary">{{ order.get_status_display }}</span>
+                        {% elif order.status == 'delivered' %}
+                            <span class="badge badge-success">{{ order.get_status_display }}</span>
+                        {% elif order.status == 'cancelled' %}
+                            <span class="badge badge-danger">{{ order.get_status_display }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div>
+                    <div style="font-size: 0.875rem; color: var(--gray-600); margin-bottom: 0.25rem;">Payment Method</div>
+                    <div>{{ order.payment.get_method_display }}</div>
+                </div>
+
+                <div>
+                    <div style="font-size: 0.875rem; color: var(--gray-600); margin-bottom: 0.25rem;">Payment Status</div>
+                    <div>
+                        {% if order.payment.status == 'paid' %}
+                            <span class="badge badge-success">Paid</span>
+                        {% elif order.payment.status == 'pending' %}
+                            <span class="badge badge-warning">Pending</span>
+                        {% else %}
+                            <span class="badge badge-danger">Failed</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <hr style="margin: 1.5rem 0; border-color: var(--gray-200);">
+
+            <h4 style="margin-bottom: 1rem; font-size: 1rem;">Update Order Status</h4>
+            <form method="post" action="{% url 'admin_panel:order_update_status' order.order_number %}">
+                {% csrf_token %}
+                <div class="d-flex gap-2">
+                    <select name="status" class="form-control" style="flex: 1;">
+                        {% for value, label in status_choices %}
+                            <option value="{{ value }}" {% if order.status == value %}selected{% endif %}>
+                                {{ label }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-check"></i> Update
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Customer Information -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">Customer Information</h3>
+        </div>
+        <div class="card-body">
+            <div style="display: grid; gap: 1rem;">
+                <div>
+                    <div style="font-size: 0.875rem; color: var(--gray-600); margin-bottom: 0.25rem;">Full Name</div>
+                    <div style="font-weight: 500;">{{ order.address.full_name }}</div>
+                </div>
+                
+                <div>
+                    <div style="font-size: 0.875rem; color: var(--gray-600); margin-bottom: 0.25rem;">Phone</div>
+                    <div>
+                        <a href="tel:{{ order.address.phone }}" style="color: var(--primary); text-decoration: none;">
+                            {{ order.address.phone }}
+                        </a>
+                    </div>
+                </div>
+                
+                {% if order.address.email %}
+                    <div>
+                        <div style="font-size: 0.875rem; color: var(--gray-600); margin-bottom: 0.25rem;">Email</div>
+                        <div>
+                            <a href="mailto:{{ order.address.email }}" style="color: var(--primary); text-decoration: none;">
+                                {{ order.address.email }}
+                            </a>
+                        </div>
+                    </div>
+                {% endif %}
+                
+                <div>
+                    <div style="font-size: 0.875rem; color: var(--gray-600); margin-bottom: 0.25rem;">Shipping Address</div>
+                    <div style="line-height: 1.6;">
+                        {{ order.address.address_line }}<br>
+                        {{ order.address.city }}, {{ order.address.state }}<br>
+                        {{ order.address.pincode }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Order Items -->
+<div class="card mt-3">
+    <div class="card-header">
+        <h3 class="card-title">Order Items</h3>
+    </div>
+    <div class="card-body" style="padding: 0;">
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Product</th>
+                        <th>Variant</th>
+                        <th>Unit Price</th>
+                        <th>Quantity</th>
+                        <th>Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in order.items.all %}
+                        <tr>
+                            <td style="font-weight: 500;">{{ item.product_name }}</td>
+                            <td>{{ item.variant_snapshot }}</td>
+                            <td>₹{{ item.unit_price }}</td>
+                            <td>{{ item.quantity }}</td>
+                            <td style="font-weight: 600;">₹{{ item.line_total }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="card-footer">
+        <div style="display: grid; gap: 0.5rem; max-width: 300px; margin-left: auto;">
+            <div style="display: flex; justify-content: space-between;">
+                <span>Subtotal:</span>
+                <span style="font-weight: 600;">₹{{ order.subtotal }}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+                <span>Shipping:</span>
+                <span style="font-weight: 600;">₹{{ order.shipping }}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding-top: 0.5rem; border-top: 2px solid var(--gray-300); font-size: 1.1rem;">
+                <span style="font-weight: 700;">Total:</span>
+                <span style="font-weight: 700; color: var(--primary);">₹{{ order.total }}</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div style="margin-top: 1.5rem;">
+    <a href="{% url 'admin_panel:order_list' %}" class="btn btn-secondary">
+        <i class="fas fa-arrow-left"></i> Back to Orders
+    </a>
+</div>
+{% endblock %}
+

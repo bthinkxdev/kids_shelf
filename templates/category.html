@@ -1,0 +1,314 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}{{ page_title }} - Kids Shelf{% endblock %}
+{% block meta_description %}Browse our collection of magical children's books. Filter by category, price, and age group.{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/category_fixes.css' %}">
+{% endblock %}
+
+{% block content %}
+    <!-- Page Header -->
+    <section class="page-header">
+        <div class="container">
+            <h1 class="page-title">{{ page_title }}</h1>
+            <p class="page-description">Discover magical stories that spark imagination! ✨📖</p>
+        </div>
+    </section>
+
+    <!-- Main Content -->
+    <section class="section">
+        <div class="container">
+            <!-- Mobile Filter Button (Sticky) -->
+            <div class="mobile-filter-trigger">
+                <p class="product-count-text">
+                    Showing <strong>{{ page_obj.paginator.count }}</strong> magical books ✨
+                </p>
+                <button type="button" class="mobile-filter-btn" id="openFilterDrawer">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="4" y1="6" x2="20" y2="6"></line>
+                        <line x1="4" y1="12" x2="20" y2="12"></line>
+                        <line x1="4" y1="18" x2="10" y2="18"></line>
+                    </svg>
+                    Filters
+                </button>
+            </div>
+
+            <!-- Catalog Layout: Sidebar + Products -->
+            <div class="catalog-layout">
+                <!-- SIDEBAR FILTERS (Desktop Only) -->
+                <aside class="sidebar-filters">
+                    <div class="sidebar-header">
+                        <h2 class="sidebar-title">Filters</h2>
+                        <a href="{% url 'store:product_list' %}" class="reset-link">Reset All</a>
+                    </div>
+
+                    <form method="get" action="{% url 'store:product_list' %}" id="desktopFilterForm">
+                        {% if filters.q %}
+                            <input type="hidden" name="q" value="{{ filters.q }}">
+                        {% endif %}
+
+                        <!-- Category Filter -->
+                        <div class="filter-group">
+                            <label class="filter-label">📚 Category</label>
+                            <select name="category" onchange="this.form.submit()">
+                                <option value="all">All Categories</option>
+                                {% for category in categories %}
+                                    <option value="{{ category.slug }}" {% if filters.category == category.slug %}selected{% endif %}>
+                                        {{ category.name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- Age Group Pills -->
+                        <div class="filter-group">
+                            <label class="filter-label">👶 Age Group</label>
+                            <div class="age-pills-container">
+                                {% for age_group in age_groups %}
+                                    <input 
+                                        type="checkbox" 
+                                        name="age_group" 
+                                        value="{{ age_group.slug }}" 
+                                        id="age-desktop-{{ age_group.slug }}"
+                                        class="age-pill"
+                                        {% if age_group.slug in selected_age_groups %}checked{% endif %}
+                                    >
+                                    <label for="age-desktop-{{ age_group.slug }}" class="age-pill-label">
+                                        <span class="pill-emoji">{{ age_group.emoji }}</span>
+                                        <span>{{ age_group.name }}</span>
+                                    </label>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <!-- Price Range -->
+                        <div class="filter-group">
+                            <label class="filter-label">💰 Min Price (₹)</label>
+                            <input type="number" name="min_price" placeholder="Min" min="0" value="{{ filters.min_price }}">
+                        </div>
+
+                        <div class="filter-group">
+                            <label class="filter-label">💰 Max Price (₹)</label>
+                            <input type="number" name="max_price" placeholder="Max" min="0" value="{{ filters.max_price }}">
+                        </div>
+
+                        <!-- Format Filter -->
+                        <div class="filter-group">
+                            <label class="filter-label">📖 Format</label>
+                            <select name="format_type" onchange="this.form.submit()">
+                                <option value="">All Formats</option>
+                                {% for format_code, format_name in format_options %}
+                                    <option value="{{ format_code }}" {% if filters.format_type == format_code %}selected{% endif %}>
+                                        {{ format_name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <button type="submit" class="sidebar-apply-btn">Apply Filters</button>
+                    </form>
+                </aside>
+
+                <!-- PRODUCTS AREA -->
+                <div class="products-area">
+                    <!-- Product Count -->
+                    {% comment %} <div class="product-count-wrapper">
+                        <p class="product-count-text">
+                            Showing <strong>{{ page_obj.paginator.count }}</strong> magical books ✨
+                        </p>
+                    </div> {% endcomment %}
+
+                    <!-- Products Grid -->
+                    {% if products %}
+                        <div class="product-grid">
+                            {% for product in products %}
+                                <div class="product-card">
+                                    <a href="{% url 'store:product_detail' product.slug %}" class="product-link">
+                                        <div class="product-image">
+                                            {% with image=product.images.first %}
+                                                {% if image %}
+                                                    <img src="{{ image.image.url }}" alt="{{ product.name }}" loading="lazy">
+                                                {% else %}
+                                                    <img src="{% static 'images/banner.png' %}" alt="{{ product.name }}" loading="lazy">
+                                                {% endif %}
+                                            {% endwith %}
+                                            {% if product.is_bestseller %}
+                                                <span class="book-badge">🔥 Bestseller</span>
+                                            {% endif %}
+                                            {% if product.age_range_display %}
+                                                <span class="age-badge">{{ product.age_range_display }}</span>
+                                            {% endif %}
+                                        </div>
+                                        <div class="product-info">
+                                            <p class="product-category">{{ product.category.name }}</p>
+                                            <h3 class="product-name">{{ product.name }}</h3>
+                                            <p class="product-author">by {{ product.author }}</p>
+                                            <div class="product-price">
+                                                {% if product.original_price and product.original_price > product.price %}
+                                                    <span class="original-price">₹{{ product.original_price }}</span>
+                                                    <span class="current-price">₹{{ product.price }}</span>
+                                                    {% if product.discount_percent > 0 %}
+                                                        <span class="discount-badge">{{ product.discount_percent }}% OFF</span>
+                                                    {% endif %}
+                                                {% else %}
+                                                    <span class="current-price">₹{{ product.price }}</span>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </a>
+                                    <button class="add-to-cart-btn" onclick="location.href='{% url 'store:product_detail' product.slug %}'">
+                                        View Details
+                                    </button>
+                                </div>
+                            {% endfor %}
+                        </div>
+                        <div class="pagination-container">
+                            <div class="pagination">
+                                {% if page_obj.has_previous %}
+                                <a href="?page={{ page_obj.previous_page_number }}" class="page-link">← Prev</a>
+                                {% endif %}
+
+                                <span class="page-link active">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+
+                                {% if page_obj.has_next %}
+                                <a href="?page={{ page_obj.next_page_number }}" class="page-link">Next →</a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% else %}
+                        <!-- No Products State -->
+                        <div class="no-products">
+                            <div class="no-products-icon">📚</div>
+                            <h2>No Books Found</h2>
+                            <p>We couldn't find any books matching your filters. Try adjusting your selection!</p>
+                            <a class="btn btn-primary" href="{% url 'store:product_list' %}">Clear Filters</a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- MOBILE FILTER DRAWER -->
+    <div class="filter-drawer-overlay" id="filterDrawerOverlay"></div>
+    <div class="filter-drawer" id="filterDrawer">
+        <div class="drawer-header">
+            <h2 class="drawer-title">Filters</h2>
+            <button type="button" class="drawer-close-btn" id="closeFilterDrawer">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+
+        <form method="get" action="{% url 'store:product_list' %}" id="mobileFilterForm">
+            {% if filters.q %}
+                <input type="hidden" name="q" value="{{ filters.q }}">
+            {% endif %}
+
+            <!-- Category Filter -->
+            <div class="filter-group">
+                <label class="filter-label">📚 Category</label>
+                <select name="category">
+                    <option value="all">All Categories</option>
+                    {% for category in categories %}
+                        <option value="{{ category.slug }}" {% if filters.category == category.slug %}selected{% endif %}>
+                            {{ category.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Age Group Pills -->
+            <div class="filter-group">
+                <label class="filter-label">👶 Age Group</label>
+                <div class="age-pills-container">
+                    {% for age_group in age_groups %}
+                        <input 
+                            type="checkbox" 
+                            name="age_group" 
+                            value="{{ age_group.slug }}" 
+                            id="age-mobile-{{ age_group.slug }}"
+                            class="age-pill"
+                            {% if age_group.slug in selected_age_groups %}checked{% endif %}
+                        >
+                        <label for="age-mobile-{{ age_group.slug }}" class="age-pill-label">
+                            <span class="pill-emoji">{{ age_group.emoji }}</span>
+                            <span>{{ age_group.name }}</span>
+                        </label>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Price Range -->
+            <div class="filter-group">
+                <label class="filter-label">💰 Min Price (₹)</label>
+                <input type="number" name="min_price" placeholder="Min" min="0" value="{{ filters.min_price }}">
+            </div>
+
+            <div class="filter-group">
+                <label class="filter-label">💰 Max Price (₹)</label>
+                <input type="number" name="max_price" placeholder="Max" min="0" value="{{ filters.max_price }}">
+            </div>
+
+            <!-- Format Filter -->
+            <div class="filter-group">
+                <label class="filter-label">📖 Format</label>
+                <select name="format_type">
+                    <option value="">All Formats</option>
+                    {% for format_code, format_name in format_options %}
+                        <option value="{{ format_code }}" {% if filters.format_type == format_code %}selected{% endif %}>
+                            {{ format_name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Drawer Actions -->
+            <div class="drawer-actions">
+                <a href="{% url 'store:product_list' %}" class="drawer-reset-btn">Reset</a>
+                <button type="submit" class="drawer-apply-btn">Apply Filters</button>
+            </div>
+        </form>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Filter Drawer Toggle
+document.addEventListener('DOMContentLoaded', function() {
+    const openBtn = document.getElementById('openFilterDrawer');
+    const closeBtn = document.getElementById('closeFilterDrawer');
+    const drawer = document.getElementById('filterDrawer');
+    const overlay = document.getElementById('filterDrawerOverlay');
+    
+    if (openBtn && drawer && overlay) {
+        // Open drawer
+        openBtn.addEventListener('click', function() {
+            drawer.classList.add('active');
+            overlay.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        });
+        
+        // Close drawer
+        const closeDrawer = function() {
+            drawer.classList.remove('active');
+            overlay.classList.remove('active');
+            document.body.style.overflow = '';
+        };
+        
+        closeBtn.addEventListener('click', closeDrawer);
+        overlay.addEventListener('click', closeDrawer);
+        
+        // Close on ESC key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && drawer.classList.contains('active')) {
+                closeDrawer();
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

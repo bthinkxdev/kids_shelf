@@ -1,0 +1,301 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Order History - Kids Shelf{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Orders Page - Magical History Style */
+    .orders-page {
+        padding: var(--space-11) 0;
+        background: var(--gradient-soft);
+        min-height: 70vh;
+    }
+    
+    .breadcrumb {
+        margin-bottom: var(--space-6);
+    }
+    
+    .breadcrumb a {
+        color: var(--primary);
+        font-weight: 600;
+        font-size: 15px;
+        text-decoration: none;
+        transition: all var(--transition-base);
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-2);
+    }
+    
+    .breadcrumb a:hover {
+        color: var(--primary-dark);
+        transform: translateX(-4px);
+    }
+    
+    .order-history {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-5);
+    }
+    
+    .order-card {
+        background: var(--white);
+        padding: var(--space-6);
+        border-radius: var(--radius-2xl);
+        border: 3px solid var(--secondary);
+        box-shadow: var(--shadow-md);
+        transition: all var(--transition-bounce);
+    }
+    
+    .order-card:hover {
+        border-color: var(--primary);
+        box-shadow: var(--shadow-xl);
+        transform: translateY(-4px);
+    }
+    
+    .order-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: var(--space-4);
+        padding-bottom: var(--space-4);
+        border-bottom: 2px dashed var(--gray-200);
+    }
+    
+    .order-info-left strong {
+        font-family: var(--font-display);
+        font-size: 18px;
+        font-weight: 700;
+        color: var(--primary);
+        display: block;
+        margin-bottom: var(--space-2);
+    }
+    
+    .order-date {
+        font-size: 14px;
+        color: var(--gray-600);
+        display: flex;
+        align-items: center;
+        gap: var(--space-1);
+    }
+    
+    .order-date::before {
+        content: '📅';
+        font-size: 16px;
+    }
+    
+    .order-total {
+        font-family: var(--font-display);
+        font-size: 24px;
+        font-weight: 800;
+        color: var(--primary);
+    }
+    
+    .order-status {
+        display: inline-block;
+        padding: var(--space-2) var(--space-4);
+        border-radius: var(--radius-full);
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: var(--space-3);
+    }
+    
+    .status-placed {
+        background: #FFF3CD;
+        color: #856404;
+        border: 2px solid #FFE69C;
+    }
+    
+    .status-confirmed {
+        background: #D1ECF1;
+        color: #0C5460;
+        border: 2px solid #BEE5EB;
+    }
+    
+    .status-shipped {
+        background: #CFE2FF;
+        color: #084298;
+        border: 2px solid #B6D4FE;
+    }
+    
+    .status-delivered {
+        background: #D1F4DD;
+        color: #0F5132;
+        border: 2px solid var(--success);
+    }
+    
+    .status-cancelled {
+        background: #F8D7DA;
+        color: #842029;
+        border: 2px solid #F5C2C7;
+    }
+    
+    .payment-status {
+        display: inline-block;
+        padding: var(--space-2) var(--space-4);
+        border-radius: var(--radius-full);
+        font-size: 11px;
+        font-weight: 700;
+        margin-bottom: var(--space-3);
+        margin-left: var(--space-2);
+    }
+    
+    .status-paid {
+        background: var(--success);
+        color: var(--black);
+    }
+    
+    .status-pending {
+        background: var(--butter);
+        color: var(--black);
+    }
+    
+    .status-failed {
+        background: #FF6B6B;
+        color: var(--white);
+    }
+    
+    .order-items-list {
+        background: var(--soft-gray);
+        padding: var(--space-4);
+        border-radius: var(--radius-md);
+    }
+    
+    .order-item-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: var(--space-3) 0;
+        border-bottom: 1px solid var(--gray-200);
+    }
+    
+    .order-item-row:last-child {
+        border-bottom: none;
+    }
+    
+    .order-item-name {
+        font-size: 14px;
+        color: var(--gray-700);
+        flex: 1;
+    }
+    
+    .order-item-price {
+        font-size: 16px;
+        font-weight: 700;
+        color: var(--primary);
+        font-family: var(--font-display);
+    }
+    
+    /* Empty State */
+    .empty-orders {
+        text-align: center;
+        padding: var(--space-12) var(--space-7);
+        background: var(--white);
+        border-radius: var(--radius-2xl);
+        border: 3px dashed var(--secondary);
+    }
+    
+    .empty-orders-icon {
+        font-size: 80px;
+        margin-bottom: var(--space-5);
+        animation: float 3s ease-in-out infinite;
+    }
+    
+    .empty-orders h2 {
+        font-family: var(--font-display);
+        font-size: 32px;
+        font-weight: 800;
+        color: var(--black);
+        margin-bottom: var(--space-3);
+    }
+    
+    .empty-orders p {
+        font-size: 18px;
+        color: var(--gray-600);
+        margin-bottom: var(--space-7);
+    }
+    
+    /* Responsive */
+    @media (max-width: 768px) {
+        .order-card-header {
+            flex-direction: column;
+            gap: var(--space-3);
+        }
+        
+        .order-total {
+            font-size: 20px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+    <section class="orders-page">
+        <div class="container">
+            <div class="breadcrumb">
+                <a href="{% url 'auth:account' %}">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M19 12H5M12 19l-7-7 7-7"/>
+                    </svg>
+                    Back to Account
+                </a>
+            </div>
+            
+            <div class="section-header">
+                <h1 class="section-title">Your Orders</h1>
+                <p class="section-subtitle">Review your magical book adventures! 📚✨</p>
+            </div>
+
+            {% if orders %}
+                <div class="order-history">
+                    {% for order in orders %}
+                        <div class="order-card">
+                            <div class="order-card-header">
+                                <div class="order-info-left">
+                                    <strong>#{{ order.order_number }}</strong>
+                                    <div class="order-date">{{ order.created_at|date:"M d, Y" }}</div>
+                                </div>
+                                <div class="order-total">₹{{ order.total }}</div>
+                            </div>
+                            
+                            <div style="margin-bottom: var(--space-4);">
+                                <span class="order-status status-{{ order.status }}">
+                                    📦 {{ order.get_status_display }}
+                                </span>
+                                {% if order.payment %}
+                                <span class="payment-status status-{{ order.payment.status }}">
+                                    💳 Payment: {{ order.payment.get_status_display }}
+                                </span>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="order-items-list">
+                                {% for item in order.items.all %}
+                                    <div class="order-item-row">
+                                        <span class="order-item-name">
+                                            📖 {{ item.product_name }} <em>({{ item.variant_snapshot }})</em> × {{ item.quantity }}
+                                        </span>
+                                        <span class="order-item-price">₹{{ item.line_total }}</span>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="empty-orders">
+                    <div class="empty-orders-icon">📚</div>
+                    <h2>No Orders Yet!</h2>
+                    <p>Start your reading adventure today!</p>
+                    <a href="{% url 'store:product_list' %}" class="btn btn-primary">
+                        <span>Start Shopping</span>
+                        <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M5 12h14M12 5l7 7-7 7"/>
+                        </svg>
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </section>
+{% endblock %}

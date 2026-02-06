@@ -1,0 +1,113 @@
+{% extends "admin/base.html" %}
+{% load static %}
+
+{% block title %}Orders{% endblock %}
+{% block page_title %}Orders{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">Manage Orders</h3>
+    </div>
+
+    <div class="card-body">
+        <!-- Filters -->
+        <form method="get" class="filters">
+            <div class="search-box">
+                <i class="fas fa-search"></i>
+                <input type="text" name="search" class="form-control" placeholder="Search orders..." 
+                       value="{{ search_query }}">
+            </div>
+            
+            <div class="filter-group">
+                <select name="status" class="form-control" onchange="this.form.submit()">
+                    <option value="">All Status</option>
+                    {% for value, label in status_choices %}
+                        <option value="{{ value }}" {% if filter_status == value %}selected{% endif %}>
+                            {{ label }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </form>
+
+        <!-- Table -->
+        {% if orders %}
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Order #</th>
+                            <th>Customer</th>
+                            <th>Phone</th>
+                            <th>Items</th>
+                            <th>Total</th>
+                            <th>Status</th>
+                            <th>Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for order in orders %}
+                            <tr>
+                                <td>
+                                    <a href="{% url 'admin_panel:order_detail' order.order_number %}" 
+                                       style="color: var(--primary); text-decoration: none; font-weight: 600;">
+                                        {{ order.order_number }}
+                                    </a>
+                                </td>
+                                <td>{{ order.address.full_name }}</td>
+                                <td>{{ order.address.phone }}</td>
+                                <td>{{ order.items.count }} items</td>
+                                <td style="font-weight: 600;">₹{{ order.total }}</td>
+                                <td>
+                                    {% if order.status == 'placed' %}
+                                        <span class="badge badge-info">{{ order.get_status_display }}</span>
+                                    {% elif order.status == 'confirmed' %}
+                                        <span class="badge badge-warning">{{ order.get_status_display }}</span>
+                                    {% elif order.status == 'shipped' %}
+                                        <span class="badge badge-secondary">{{ order.get_status_display }}</span>
+                                    {% elif order.status == 'delivered' %}
+                                        <span class="badge badge-success">{{ order.get_status_display }}</span>
+                                    {% elif order.status == 'cancelled' %}
+                                        <span class="badge badge-danger">{{ order.get_status_display }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ order.created_at|date:"d M, Y" }}</td>
+                                <td>
+                                    <a href="{% url 'admin_panel:order_detail' order.order_number %}" class="btn btn-sm btn-secondary">
+                                        <i class="fas fa-eye"></i> View
+                                    </a>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            {% if is_paginated %}
+                <div class="pagination">
+                    {% if page_obj.has_previous %}
+                        <a href="?page=1{% if search_query %}&search={{ search_query }}{% endif %}{% if filter_status %}&status={{ filter_status }}{% endif %}">First</a>
+                        <a href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if filter_status %}&status={{ filter_status }}{% endif %}">Previous</a>
+                    {% endif %}
+
+                    <span class="current">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+
+                    {% if page_obj.has_next %}
+                        <a href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if filter_status %}&status={{ filter_status }}{% endif %}">Next</a>
+                        <a href="?page={{ page_obj.paginator.num_pages }}{% if search_query %}&search={{ search_query }}{% endif %}{% if filter_status %}&status={{ filter_status }}{% endif %}">Last</a>
+                    {% endif %}
+                </div>
+            {% endif %}
+        {% else %}
+            <div class="empty-state">
+                <i class="fas fa-shopping-bag"></i>
+                <p>No orders found</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+

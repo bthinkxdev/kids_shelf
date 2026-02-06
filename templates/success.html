@@ -1,0 +1,359 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Order Success - Kids Shelf{% endblock %}
+{% block meta_description %}Your order has been placed successfully!{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Success Page - Magical Celebration Style */
+    .success-page {
+        padding: var(--space-12) 0;
+        background: var(--gradient-sky);
+        min-height: 80vh;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    /* Floating celebration emojis */
+    .success-page::before {
+        content: '🎉';
+        position: absolute;
+        top: 10%;
+        left: 10%;
+        font-size: 60px;
+        animation: float 4s ease-in-out infinite;
+        opacity: 0.6;
+    }
+    
+    .success-page::after {
+        content: '🎊';
+        position: absolute;
+        bottom: 20%;
+        right: 15%;
+        font-size: 50px;
+        animation: float 3s ease-in-out infinite 0.5s;
+        opacity: 0.6;
+    }
+    
+    @keyframes float {
+        0%, 100% { transform: translateY(0px) rotate(0deg); }
+        50% { transform: translateY(-20px) rotate(10deg); }
+    }
+    
+    .success-content {
+        max-width: 700px;
+        margin: 0 auto;
+        text-align: center;
+        background: var(--white);
+        padding: var(--space-10);
+        border-radius: var(--radius-2xl);
+        border: 4px solid var(--success);
+        box-shadow: var(--shadow-2xl);
+        position: relative;
+        z-index: 1;
+    }
+    
+    .success-icon {
+        width: 100px;
+        height: 100px;
+        background: linear-gradient(135deg, var(--success) 0%, var(--mint) 100%);
+        border-radius: var(--radius-full);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto var(--space-6);
+        font-size: 50px;
+        color: var(--white);
+        font-weight: 800;
+        box-shadow: 0 8px 24px rgba(144, 238, 144, 0.4);
+        animation: successPop 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    }
+    
+    @keyframes successPop {
+        0% { transform: scale(0) rotate(0deg); }
+        50% { transform: scale(1.1) rotate(5deg); }
+        100% { transform: scale(1) rotate(0deg); }
+    }
+    
+    .success-content h1 {
+        font-family: var(--font-display);
+        font-size: clamp(28px, 5vw, 40px);
+        font-weight: 800;
+        color: var(--black);
+        margin-bottom: var(--space-4);
+        line-height: 1.2;
+    }
+    
+    .success-content > p {
+        font-size: 18px;
+        color: var(--gray-700);
+        margin-bottom: var(--space-7);
+        line-height: 1.6;
+    }
+    
+    .order-number {
+        display: inline-block;
+        padding: var(--space-4) var(--space-6);
+        background: var(--primary-light);
+        border: 3px solid var(--primary);
+        border-radius: var(--radius-xl);
+        margin-bottom: var(--space-7);
+    }
+    
+    .order-number strong {
+        font-family: var(--font-display);
+        font-size: 16px;
+        color: var(--primary-dark);
+        margin-right: var(--space-2);
+    }
+    
+    /* Order Summary Box */
+    .order-summary-box {
+        text-align: left;
+        background: var(--soft-gray);
+        padding: var(--space-6);
+        border-radius: var(--radius-xl);
+        margin-bottom: var(--space-7);
+        border: 3px solid var(--secondary);
+    }
+    
+    .order-summary-box h3 {
+        font-family: var(--font-display);
+        font-size: 20px;
+        font-weight: 700;
+        color: var(--black);
+        margin-bottom: var(--space-5);
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+    }
+    
+    .order-summary-box h3::before {
+        content: '📋';
+        font-size: 24px;
+    }
+    
+    .detail-section {
+        margin-bottom: var(--space-5);
+        padding: var(--space-4);
+        background: var(--white);
+        border-radius: var(--radius-md);
+    }
+    
+    .detail-section strong {
+        display: block;
+        font-family: var(--font-display);
+        font-size: 15px;
+        font-weight: 700;
+        color: var(--primary);
+        margin-bottom: var(--space-3);
+    }
+    
+    .detail-section p,
+    .detail-section div {
+        font-size: 14px;
+        color: var(--gray-700);
+        line-height: 1.6;
+        margin: 4px 0;
+    }
+    
+    .order-items-list {
+        margin-top: var(--space-3);
+    }
+    
+    .order-item-row {
+        display: flex;
+        justify-content: space-between;
+        padding: var(--space-3) 0;
+        border-bottom: 1px solid var(--gray-200);
+        font-size: 14px;
+    }
+    
+    .order-item-row:last-child {
+        border-bottom: none;
+    }
+    
+    .order-item-name {
+        color: var(--gray-700);
+        flex: 1;
+    }
+    
+    .order-item-price {
+        font-weight: 700;
+        color: var(--primary);
+        margin-left: var(--space-3);
+    }
+    
+    .summary-totals {
+        padding-top: var(--space-4);
+        border-top: 3px solid var(--primary);
+        margin-top: var(--space-4);
+    }
+    
+    .summary-row {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: var(--space-2);
+        font-size: 15px;
+    }
+    
+    .summary-row.total {
+        font-size: 20px;
+        font-weight: 800;
+        font-family: var(--font-display);
+        color: var(--black);
+        margin-top: var(--space-3);
+    }
+    
+    .summary-row.total span:last-child {
+        color: var(--primary);
+    }
+    
+    .payment-status-box {
+        margin-top: var(--space-4);
+        padding: var(--space-4);
+        background: var(--primary-light);
+        border-radius: var(--radius-md);
+        text-align: center;
+        border: 2px solid var(--primary);
+    }
+    
+    .payment-status-box strong {
+        display: block;
+        font-size: 14px;
+        margin-bottom: 4px;
+    }
+    
+    .status-paid {
+        color: var(--success);
+        font-weight: 700;
+    }
+    
+    .status-pending {
+        color: var(--accent);
+        font-weight: 700;
+    }
+    
+    /* Action Buttons */
+    .success-actions {
+        display: flex;
+        gap: var(--space-4);
+        flex-wrap: wrap;
+        justify-content: center;
+        margin-bottom: var(--space-6);
+    }
+    
+    .success-actions .btn {
+        flex: 1;
+        min-width: 200px;
+    }
+    
+    /* Footer Note */
+    .success-content > p:last-child {
+        margin-top: var(--space-6);
+        font-size: 14px;
+        color: var(--gray-600);
+        margin-bottom: 0;
+    }
+    
+    /* Responsive */
+    @media (max-width: 768px) {
+        .success-content {
+            padding: var(--space-7);
+        }
+        
+        .success-actions {
+            flex-direction: column;
+        }
+        
+        .success-actions .btn {
+            width: 100%;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+    <section class="success-page">
+        <div class="container">
+            <div class="success-content">
+                <div class="success-icon">✓</div>
+                <h1>Order Placed Successfully! 🎉</h1>
+                <p>Woohoo! Thank you for shopping with Kids Shelf. Your magical books are on their way! 📚✨</p>
+
+                <div class="order-number">
+                    <strong>Order Number:</strong> {{ order.order_number }}
+                </div>
+
+                <div class="order-summary-box">
+                    <h3>Order Summary</h3>
+
+                    <div class="detail-section">
+                        <strong>👤 Customer Details:</strong>
+                        <p>{{ order.address.full_name }}</p>
+                        <p>📞 {{ order.address.phone }}</p>
+                        {% if order.address.email %}<p>📧 {{ order.address.email }}</p>{% endif %}
+                    </div>
+
+                    <div class="detail-section">
+                        <strong>📍 Delivery Address:</strong>
+                        <p>{{ order.address.address_line }}</p>
+                        <p>{{ order.address.city }}, {{ order.address.state }} - {{ order.address.pincode }}</p>
+                    </div>
+
+                    <div class="detail-section">
+                        <strong>📚 Items Ordered:</strong>
+                        <div class="order-items-list">
+                            {% for item in order.items.all %}
+                                <div class="order-item-row">
+                                    <span class="order-item-name">{{ forloop.counter }}. {{ item.product_name }} ({{ item.variant_snapshot }}) × {{ item.quantity }}</span>
+                                    <span class="order-item-price">₹{{ item.line_total }}</span>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <div class="summary-totals">
+                        <div class="summary-row">
+                            <span>Subtotal:</span>
+                            <span>₹{{ order.subtotal }}</span>
+                        </div>
+                        <div class="summary-row">
+                            <span>Shipping:</span>
+                            <span>{% if order.shipping == 0 %}FREE 🎉{% else %}₹{{ order.shipping }}{% endif %}</span>
+                        </div>
+                        <div class="summary-row total">
+                            <span>Total:</span>
+                            <span>₹{{ order.total }}</span>
+                        </div>
+                    </div>
+
+                    <div class="payment-status-box">
+                        <strong>💳 Payment Method:</strong> {{ order.payment.get_method_display }}<br>
+                        <strong>Payment Status:</strong> 
+                        <span class="{% if order.payment.status == 'paid' %}status-paid{% else %}status-pending{% endif %}">
+                            {{ order.payment.get_status_display }}
+                        </span>
+                    </div>
+                </div>
+
+                <div class="success-actions">
+                    <a href="{% url 'store:home' %}" class="btn btn-primary">
+                        <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+                        </svg>
+                        <span>Continue Shopping</span>
+                    </a>
+                    <a href="https://wa.me/919876543210?text=Hello%20Kids%20Shelf!%20I%20want%20to%20track%20my%20order." target="_blank" class="btn btn-whatsapp">
+                        <svg class="btn-icon" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.520.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.520-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.500-.669-.510-.173-.008-.371-.010-.570-.010-.198 0-.520.074-.792.372-.272.297-1.040 1.016-1.040 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.200 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.360.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.570-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.510-5.260c.001-5.450 4.436-9.884 9.888-9.884 2.64 0 5.122 1.030 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.450-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.050 0C5.495 0 .160 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.890-5.335 11.893-11.893a11.821 11.821 0 00-3.480-8.413z"/>
+                        </svg>
+                        <span>Contact Us</span>
+                    </a>
+                </div>
+
+                <p>We'll send you updates on WhatsApp! For any queries, feel free to reach out. Happy reading! 📖💕</p>
+            </div>
+        </div>
+    </section>
+{% endblock %}

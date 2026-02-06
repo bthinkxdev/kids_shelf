@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invoice - {{ order.order_number }}</title>
+    <style>
+        /* A4 Print Styles */
+        @page {
+            size: A4;
+            margin: 0;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Arial', 'Helvetica', sans-serif;
+            font-size: 12pt;
+            line-height: 1.6;
+            color: #333;
+            background: white;
+        }
+        
+        .invoice-container {
+            width: 210mm; /* A4 width */
+            min-height: 297mm; /* A4 height */
+            margin: 0 auto;
+            padding: 20mm;
+            background: white;
+        }
+        
+        .invoice-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding-bottom: 20px;
+            border-bottom: 3px solid #000000;
+            margin-bottom: 30px;
+        }
+        
+        .company-info {
+            flex: 1;
+        }
+        
+        .company-name {
+            font-size: 32pt;
+            font-weight: bold;
+            color: #000000;
+            margin-bottom: 5px;
+            font-family: 'Georgia', serif;
+        }
+        
+        .company-tagline {
+            font-size: 11pt;
+            color: #666666;
+            margin-bottom: 15px;
+        }
+        
+        .company-details {
+            font-size: 10pt;
+            color: #666;
+            line-height: 1.8;
+        }
+        
+        .invoice-meta {
+            text-align: right;
+        }
+        
+        .invoice-title {
+            font-size: 28pt;
+            font-weight: bold;
+            color: #000000;
+            margin-bottom: 10px;
+        }
+        
+        .invoice-number {
+            font-size: 14pt;
+            color: #000000;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .invoice-date {
+            font-size: 10pt;
+            color: #666;
+        }
+        
+        .invoice-body {
+            margin-bottom: 30px;
+        }
+        
+        .info-section {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 30px;
+        }
+        
+        .bill-to,
+        .ship-to {
+            flex: 1;
+            padding: 15px;
+            background: #F5F5F3;
+            border-radius: 8px;
+            margin-right: 15px;
+        }
+        
+        .ship-to {
+            margin-right: 0;
+        }
+        
+        .section-title {
+            font-size: 11pt;
+            font-weight: bold;
+            color: #000000;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .customer-details {
+            font-size: 11pt;
+            line-height: 1.8;
+        }
+        
+        .customer-name {
+            font-weight: bold;
+            font-size: 12pt;
+            color: #000000;
+            margin-bottom: 5px;
+        }
+        
+        /* Items Table */
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+        }
+        
+        .items-table thead {
+            background: #000000;
+            color: white;
+        }
+        
+        .items-table th {
+            padding: 12px;
+            text-align: left;
+            font-size: 11pt;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .items-table th:last-child,
+        .items-table td:last-child {
+            text-align: right;
+        }
+        
+        .items-table tbody tr {
+            border-bottom: 1px solid #E0E0DE;
+        }
+        
+        .items-table tbody tr:last-child {
+            border-bottom: 2px solid #000000;
+        }
+        
+        .items-table td {
+            padding: 12px;
+            font-size: 11pt;
+        }
+        
+        .item-name {
+            font-weight: 600;
+            color: #000000;
+        }
+        
+        .item-variant {
+            font-size: 10pt;
+            color: #666666;
+            margin-top: 2px;
+        }
+        
+        /* Totals Section */
+        .totals-section {
+            width: 100%;
+            margin-bottom: 30px;
+        }
+        
+        .totals-table {
+            width: 300px;
+            margin-left: auto;
+        }
+        
+        .totals-table tr {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            font-size: 11pt;
+        }
+        
+        .totals-table .total-row {
+            border-top: 2px solid #000000;
+            padding-top: 12px;
+            margin-top: 8px;
+            font-size: 14pt;
+            font-weight: bold;
+            color: #000000;
+        }
+        
+        .total-label {
+            font-weight: 600;
+        }
+        
+        .total-value {
+            font-weight: 600;
+        }
+        
+        /* Footer */
+        .invoice-footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 2px solid #E0E0DE;
+        }
+        
+        .payment-info {
+            margin-bottom: 20px;
+        }
+        
+        .payment-info-title {
+            font-size: 11pt;
+            font-weight: bold;
+            color: #000000;
+            margin-bottom: 8px;
+        }
+        
+        .payment-details {
+            font-size: 10pt;
+            color: #666;
+            line-height: 1.8;
+        }
+        
+        .payment-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 10pt;
+            font-weight: 600;
+            margin-top: 5px;
+        }
+        
+        .payment-badge.pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .payment-badge.paid {
+            background: #d1f4dd;
+            color: #0f5132;
+        }
+        
+        .order-status-badge {
+            display: inline-block;
+            padding: 6px 15px;
+            border-radius: 15px;
+            font-size: 11pt;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+        
+        .status-placed {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+        
+        .status-confirmed {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .status-shipped {
+            background: #cfe2ff;
+            color: #084298;
+        }
+        
+        .status-delivered {
+            background: #d1f4dd;
+            color: #0f5132;
+        }
+        
+        .status-cancelled {
+            background: #f8d7da;
+            color: #842029;
+        }
+        
+        .notes-section {
+            background: #F5F5F3;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+        
+        .notes-title {
+            font-size: 11pt;
+            font-weight: bold;
+            color: #000000;
+            margin-bottom: 8px;
+        }
+        
+        .notes-content {
+            font-size: 10pt;
+            color: #666;
+            line-height: 1.8;
+        }
+        
+        .thank-you {
+            text-align: center;
+            font-size: 12pt;
+            color: #000000;
+            font-weight: 600;
+            margin-top: 30px;
+        }
+        
+        /* Print Specific */
+        @media print {
+            body {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+            
+            .invoice-container {
+                margin: 0;
+                box-shadow: none;
+            }
+            
+            .no-print {
+                display: none !important;
+            }
+            
+            @page {
+                margin: 0;
+            }
+        }
+        
+        /* Screen Only */
+        @media screen {
+            body {
+                background: #f0f0f0;
+                padding: 20px;
+            }
+            
+            .invoice-container {
+                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            }
+            
+            .print-button-container {
+                text-align: center;
+                margin-bottom: 20px;
+            }
+            
+            .print-button {
+                background: #000000;
+                color: white;
+                border: none;
+                padding: 12px 30px;
+                font-size: 14pt;
+                border-radius: 8px;
+                cursor: pointer;
+                font-weight: 600;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            }
+            
+            .print-button:hover {
+                background: #333333;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="print-button-container no-print">
+        <button class="print-button" onclick="window.print()">🖨️ Print Invoice</button>
+        <button class="print-button" onclick="window.close()" style="background: #8D6E63; margin-left: 10px;">✕ Close</button>
+    </div>
+    
+    <div class="invoice-container">
+        <!-- Header -->
+        <div class="invoice-header">
+            <div class="company-info">
+                <div class="company-name">Kids Shelf</div>
+                <div class="company-tagline">Premium Women's & Baby Clothing</div>
+                <div class="company-details">
+                    Email: {{ site_email|default:"achujozefsl0709@gmail.com" }}<br>
+                    Phone: {{ site_phone|default:"+91 98765 43210" }}<br>
+                    Website: www.queenorange.com
+                </div>
+            </div>
+            <div class="invoice-meta">
+                <div class="invoice-title">INVOICE</div>
+                <div class="invoice-number">#{{ order.order_number }}</div>
+                <div class="invoice-date">
+                    Date: {{ order.created_at|date:"d M, Y" }}<br>
+                    Time: {{ order.created_at|date:"h:i A" }}
+                </div>
+                <div class="order-status-badge status-{{ order.status }}">
+                    {{ order.get_status_display }}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Customer Information -->
+        <div class="info-section">
+            <div class="bill-to">
+                <div class="section-title">Bill To</div>
+                <div class="customer-details">
+                    <div class="customer-name">{{ order.address.full_name }}</div>
+                    {% if order.address.email %}
+                        Email: {{ order.address.email }}<br>
+                    {% endif %}
+                    Phone: {{ order.address.phone }}
+                </div>
+            </div>
+            <div class="ship-to">
+                <div class="section-title">Ship To</div>
+                <div class="customer-details">
+                    <div class="customer-name">{{ order.address.full_name }}</div>
+                    {{ order.address.address_line }}<br>
+                    {{ order.address.city }}, {{ order.address.state }}<br>
+                    PIN: {{ order.address.pincode }}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Items Table -->
+        <table class="items-table">
+            <thead>
+                <tr>
+                    <th style="width: 50%;">Item Description</th>
+                    <th style="width: 15%; text-align: center;">Quantity</th>
+                    <th style="width: 17.5%;">Unit Price</th>
+                    <th style="width: 17.5%;">Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in order.items.all %}
+                <tr>
+                    <td>
+                        <div class="item-name">{{ item.product_name }}</div>
+                        <div class="item-variant">{{ item.variant_snapshot }}</div>
+                    </td>
+                    <td style="text-align: center;">{{ item.quantity }}</td>
+                    <td>₹{{ item.unit_price }}</td>
+                    <td>₹{{ item.line_total }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        
+        <!-- Totals -->
+        <div class="totals-section">
+            <table class="totals-table">
+                <tr>
+                    <td class="total-label">Subtotal:</td>
+                    <td class="total-value">₹{{ order.subtotal }}</td>
+                </tr>
+                <tr>
+                    <td class="total-label">Shipping:</td>
+                    <td class="total-value">{% if order.shipping == 0 %}FREE{% else %}₹{{ order.shipping }}{% endif %}</td>
+                </tr>
+                <tr class="total-row">
+                    <td class="total-label">TOTAL:</td>
+                    <td class="total-value">₹{{ order.total }}</td>
+                </tr>
+            </table>
+        </div>
+        
+        <!-- Footer -->
+        <div class="invoice-footer">
+            <div class="payment-info">
+                <div class="payment-info-title">Payment Information</div>
+                <div class="payment-details">
+                    Payment Method: <strong>{{ order.payment.get_method_display }}</strong><br>
+                    Payment Status: 
+                    <span class="payment-badge {% if order.payment.status == 'paid' %}paid{% else %}pending{% endif %}">
+                        {{ order.payment.get_status_display }}
+                    </span>
+                </div>
+            </div>
+            
+            <div class="notes-section">
+                <div class="notes-title">Terms & Conditions</div>
+                <div class="notes-content">
+                    • All products are covered under our quality guarantee.<br>
+                    • Returns accepted within 7 days of delivery.<br>
+                    • For any queries, please contact our customer support.<br>
+                    • Thank you for shopping with Kids Shelf!
+                </div>
+            </div>
+            
+            <div class="thank-you">
+                Thank you for your purchase! 🌟
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Auto-print when opened in new window (optional)
+        // window.onload = function() { window.print(); }
+    </script>
+</body>
+</html>
+
+
+

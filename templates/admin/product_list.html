@@ -1,0 +1,164 @@
+{% extends "admin/base.html" %}
+{% load static %}
+
+{% block title %}Products{% endblock %}
+{% block page_title %}Products{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">Manage Products</h3>
+        <a href="{% url 'admin_panel:product_create' %}" class="btn btn-primary">
+            <i class="fas fa-plus"></i>
+            <span>Add Product</span>
+        </a>
+    </div>
+
+    <div class="card-body">
+        <!-- Filters -->
+        <form method="get" class="filters">
+            <div class="search-box">
+                <i class="fas fa-search"></i>
+                <input type="text" name="search" class="form-control" placeholder="Search products..." 
+                       value="{{ search_query }}">
+            </div>
+            
+            <div class="filter-group">
+                <select name="category" class="form-control" onchange="this.form.submit()">
+                    <option value="">All Categories</option>
+                    {% for category in categories %}
+                        <option value="{{ category.id }}" {% if filter_category == category.id|stringformat:"s" %}selected{% endif %}>
+                            {{ category.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <select name="status" class="form-control" onchange="this.form.submit()">
+                    <option value="">All Status</option>
+                    <option value="active" {% if filter_status == "active" %}selected{% endif %}>Active</option>
+                    <option value="inactive" {% if filter_status == "inactive" %}selected{% endif %}>Inactive</option>
+                </select>
+            </div>
+        </form>
+
+        <!-- Table -->
+        {% if products %}
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Image</th>
+                            <th>Title</th>
+                            <th>Author</th>
+                            <th>Category</th>
+                            <th>Price</th>
+                            <th>Formats</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for product in products %}
+                            <tr>
+                                <td>
+                                    {% with image=product.images.first %}
+                                        {% if image %}
+                                            <img src="{{ image.image.url }}" alt="{{ product.name }}" 
+                                                 style="width: 50px; height: 50px; object-fit: cover; border-radius: 8px;">
+                                        {% else %}
+                                            <div style="width: 50px; height: 50px; background: var(--gray-200); border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                                                <i class="fas fa-image" style="color: var(--gray-400);"></i>
+                                            </div>
+                                        {% endif %}
+                                    {% endwith %}
+                                </td>
+                                <td>
+                                    <div style="font-weight: 500;">{{ product.name|truncatechars:40 }}</div>
+                                    <div style="font-size: 0.8rem; color: var(--gray-600);">
+                                        {% if product.is_featured %}<span class="badge badge-warning" style="font-size: 0.7rem;">Featured</span>{% endif %}
+                                        {% if product.is_bestseller %}<span class="badge badge-info" style="font-size: 0.7rem;">Bestseller</span>{% endif %}
+                                    </div>
+                                </td>
+                                <td>
+                                    <div style="font-size: 0.875rem; color: var(--gray-700);">{{ product.author|truncatechars:30 }}</div>
+                                </td>
+                                <td>{{ product.category.name }}</td>
+                                {% comment %} <td>
+                                    <div style="font-weight: 600;">₹{{ product.price }}</div>
+                                    {% if product.original_price %}
+                                        <div style="font-size: 0.8rem; color: var(--gray-500); text-decoration: line-through;">₹{{ product.original_price }}</div>
+                                    {% endif %}
+                                </td> {% endcomment %}
+                                <td>
+                                    <div style="font-weight: 600;">₹{{ product.price }}</div>
+                                </td>
+                                <td>
+                                    {% with total_formats=product.formats.all|length %}
+                                        {% if total_formats > 0 %}
+                                            <span class="badge badge-success">{{ total_formats }} formats</span>
+                                        {% else %}
+                                            <span class="badge badge-danger">No formats</span>
+                                        {% endif %}
+                                    {% endwith %}
+                                </td>
+                                <td>
+                                    {% if product.is_active %}
+                                        <span class="badge badge-success">Active</span>
+                                    {% else %}
+                                        <span class="badge badge-secondary">Inactive</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="table-actions">
+                                        <a href="{% url 'store:product_detail' product.slug %}" target="_blank" class="btn btn-sm btn-secondary" title="View">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <a href="{% url 'admin_panel:product_edit' product.pk %}" class="btn btn-sm btn-secondary">
+                                            <i class="fas fa-edit"></i> Edit
+                                        </a>
+                                        <form method="post" action="{% url 'admin_panel:product_delete' product.pk %}" 
+                                              onsubmit="return confirm('Are you sure you want to delete this product?');" style="margin: 0;">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-sm btn-danger">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            {% if is_paginated %}
+                <div class="pagination">
+                    {% if page_obj.has_previous %}
+                        <a href="?page=1{% if search_query %}&search={{ search_query }}{% endif %}{% if filter_category %}&category={{ filter_category }}{% endif %}{% if filter_status %}&status={{ filter_status }}{% endif %}">First</a>
+                        <a href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if filter_category %}&category={{ filter_category }}{% endif %}{% if filter_status %}&status={{ filter_status }}{% endif %}">Previous</a>
+                    {% endif %}
+
+                    <span class="current">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+
+                    {% if page_obj.has_next %}
+                        <a href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if filter_category %}&category={{ filter_category }}{% endif %}{% if filter_status %}&status={{ filter_status }}{% endif %}">Next</a>
+                        <a href="?page={{ page_obj.paginator.num_pages }}{% if search_query %}&search={{ search_query }}{% endif %}{% if filter_category %}&category={{ filter_category }}{% endif %}{% if filter_status %}&status={{ filter_status }}{% endif %}">Last</a>
+                    {% endif %}
+                </div>
+            {% endif %}
+        {% else %}
+            <div class="empty-state">
+                <i class="fas fa-box"></i>
+                <p>No products found</p>
+                <a href="{% url 'admin_panel:product_create' %}" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Create First Product
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+

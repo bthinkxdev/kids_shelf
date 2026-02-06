@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Admin Dashboard{% endblock %} - Kids Shelf</title>
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'css/admin.css' %}">
+    <link rel="stylesheet" href="{% static 'css/admin-mobile.css' %}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <div class="admin-wrapper">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <h2 class="sidebar-logo">
+                    <i class="fas fa-crown"></i>
+                    <span>Kids Shelf</span>
+                </h2>
+                <button class="sidebar-close" id="sidebarClose">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <a href="{% url 'admin_panel:dashboard' %}" class="nav-item {% if active_menu == 'dashboard' %}active{% endif %}">
+                    <i class="fas fa-chart-line"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="{% url 'admin_panel:order_list' %}" class="nav-item {% if active_menu == 'orders' %}active{% endif %}">
+                    <i class="fas fa-shopping-bag"></i>
+                    <span>Orders</span>
+                </a>
+                <a href="{% url 'admin_panel:product_list' %}" class="nav-item {% if active_menu == 'products' %}active{% endif %}">
+                    <i class="fas fa-box"></i>
+                    <span>Products</span>
+                </a>
+                <a href="{% url 'admin_panel:category_list' %}" class="nav-item {% if active_menu == 'categories' %}active{% endif %}">
+                    <i class="fas fa-tags"></i>
+                    <span>Categories</span>
+                </a>
+                <a href="{% url 'admin_panel:message_list' %}" class="nav-item {% if active_menu == 'messages' %}active{% endif %}">
+                    <i class="fas fa-envelope"></i>
+                    <span>Messages</span>
+                </a>
+                <div class="nav-divider"></div>
+                <a href="{% url 'store:home' %}" class="nav-item" target="_blank">
+                    <i class="fas fa-store"></i>
+                    <span>View Store</span>
+                </a>
+                <form method="post" action="{% url 'admin_panel:logout' %}" class="logout-form">
+                    {% csrf_token %}
+                    <button type="submit" class="nav-item logout-btn">
+                        <i class="fas fa-sign-out-alt"></i>
+                        <span>Logout</span>
+                    </button>
+                </form>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Top Bar -->
+            <header class="topbar">
+                <button class="menu-toggle" id="menuToggle">
+                    <i class="fas fa-bars"></i>
+                </button>
+                
+                <div class="topbar-title">
+                    <h1>{% block page_title %}Dashboard{% endblock %}</h1>
+                </div>
+                
+                <div class="topbar-actions">
+                    <div class="user-menu">
+                        <i class="fas fa-user-circle"></i>
+                        <span class="user-name">{{ request.user.username }}</span>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Content Area -->
+            <div class="content-area">
+                {% if messages %}
+                    <div class="messages-container">
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }}">
+                                <i class="fas {% if message.tags == 'success' %}fa-check-circle{% elif message.tags == 'error' %}fa-exclamation-circle{% else %}fa-info-circle{% endif %}"></i>
+                                {{ message }}
+                                <button class="alert-close">&times;</button>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+
+                {% block content %}{% endblock %}
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Mobile menu toggle
+        const menuToggle = document.getElementById('menuToggle');
+        const sidebar = document.getElementById('sidebar');
+        const sidebarClose = document.getElementById('sidebarClose');
+        const body = document.body;
+
+        menuToggle?.addEventListener('click', () => {
+            sidebar.classList.toggle('active');
+            body.classList.toggle('sidebar-open');
+        });
+
+        sidebarClose?.addEventListener('click', () => {
+            sidebar.classList.remove('active');
+            body.classList.remove('sidebar-open');
+        });
+
+        // Close sidebar when clicking outside
+        document.addEventListener('click', (e) => {
+            if (sidebar.classList.contains('active') && 
+                !sidebar.contains(e.target) && 
+                !menuToggle.contains(e.target)) {
+                sidebar.classList.remove('active');
+                body.classList.remove('sidebar-open');
+            }
+        });
+
+        // Alert close buttons
+        document.querySelectorAll('.alert-close').forEach(btn => {
+            btn.addEventListener('click', () => {
+                btn.parentElement.remove();
+            });
+        });
+
+        // Auto-dismiss alerts after 5 seconds
+        setTimeout(() => {
+            document.querySelectorAll('.alert').forEach(alert => {
+                alert.style.animation = 'slideOut 0.3s ease forwards';
+                setTimeout(() => alert.remove(), 300);
+            });
+        }, 5000);
+    </script>
+
+    {% block extra_js %}{% endblock %}
+</body>
+</html>
+
