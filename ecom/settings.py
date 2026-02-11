@@ -11,9 +11,7 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
 from pathlib import Path
-import cloudinary
-import cloudinary.uploader
-import cloudinary.api
+from decouple import config
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -22,12 +20,13 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-#vquy*q!&4dze*=i@oui3c687a7j%3unoz_nz*%*k5du_is%3i'
+SECRET_KEY = config("DJANGO_SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = config("DJANGO_DEBUG", default=False, cast=bool)
 
-ALLOWED_HOSTS = ["*"]
+# Comma-separated hostnames in .env, e.g. "*,127.0.0.1,localhost"
+ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="*", cast=list)
 
 
 # Application definition
@@ -39,10 +38,11 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'cloudinary_storage',
-    'cloudinary',
     'app',
 ]
+
+# Django storages (required for S3 media storage)
+INSTALLED_APPS += ['storages']
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -157,20 +157,68 @@ EMAIL_BACKEND = 'app.email_backend.CustomEmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-EMAIL_HOST_USER = 'achujozefsl0709@gmail.com' 
-EMAIL_HOST_PASSWORD = 'mtbsaphoieurdqqe'  
+EMAIL_HOST_USER = config("EMAIL_HOST_USER")
+EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD")
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 ADMIN_NOTIFICATION_EMAILS = ['adithyamc@bthinkx.com']
 
 # Razorpay Configuration
-RZP_CLIENT_ID = "rzp_test_SCsCy383HkUzqx"
-RZP_CLIENT_SECRET = "lV4IdUmBYEfmOh8B3TPuhSnJ"
+RZP_CLIENT_ID = config("RZP_CLIENT_ID")
+RZP_CLIENT_SECRET = config("RZP_CLIENT_SECRET")
 
-# Cloudinary Configuration
-CLOUDINARY_STORAGE = {
-    'CLOUD_NAME': 'duqdpislu',
-    'API_KEY': '621695111194353',
-    'API_SECRET': 'hk7o4DIxgWjyqXLvYBlvg81ZyBw',  
-}
 
-DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+# AWS S3 Storage configuration (media only; static files remain local)
+USE_S3 = config('USE_S3', default=False, cast=bool)
+
+if USE_S3:
+    AWS_ACCESS_KEY_ID = config("AWS_ACCESS_KEY_ID")
+    AWS_SECRET_ACCESS_KEY = config("AWS_SECRET_ACCESS_KEY")
+    AWS_STORAGE_BUCKET_NAME = config("AWS_STORAGE_BUCKET_NAME")
+    AWS_S3_REGION_NAME = config("AWS_S3_REGION_NAME")
+
+    # Optional: tag all S3 objects by client / project (e.g. kids-shelf)
+    AWS_S3_CLIENT_TAG = config("AWS_S3_CLIENT_TAG", default=None)
+
+    # Correct S3 custom domain with region
+    AWS_S3_CUSTOM_DOMAIN = f'{AWS_STORAGE_BUCKET_NAME}.s3.{AWS_S3_REGION_NAME}.amazonaws.com'
+
+    # S3 Configuration (No ACLs - rely on bucket policy)
+    # Bucket has "BucketOwnerEnforced" which disables ACLs
+    base_s3_object_params = {
+        'CacheControl': 'max-age=86400',
+    }
+    # If a client tag is configured, add it as an S3 object tag
+    # This results in Tagging="Client=kids-shelf" on every uploaded object
+    if AWS_S3_CLIENT_TAG:
+        base_s3_object_params['Tagging'] = f'Client={AWS_S3_CLIENT_TAG}'
+
+    AWS_S3_OBJECT_PARAMETERS = base_s3_object_params
+    AWS_DEFAULT_ACL = None  # Don't use ACLs, bucket policy handles public access
+    AWS_S3_FILE_OVERWRITE = False
+    AWS_QUERYSTRING_AUTH = False
+
+    # Django 4.2+ STORAGES setting
+    # Only media files go to S3; static files are always served locally
+    STORAGES = {
+        "default": {
+            "BACKEND": "custom_storage.MediaFileStorage",
+        },
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        },
+    }
+    # Public base URL for media files in S3:
+    # files will be stored under: kids-shelf/media/<upload_to>/<filename>
+    MEDIA_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/kids-shelf/media/"
+else:
+    # Local file storage for everything
+    STORAGES = {
+        "default": {
+            "BACKEND": "django.core.files.storage.FileSystemStorage",
+        },
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        },
+    }
+    MEDIA_ROOT = BASE_DIR / "media"
+    MEDIA_URL = "/media/"

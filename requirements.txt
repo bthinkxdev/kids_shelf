@@ -1,0 +1,10 @@
+django
+django-storages
+django
+django-storages
+boto3
+python-decouple
+pytz
+sqlparse
+asgiref
+psycopg2-binary

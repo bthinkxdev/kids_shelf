@@ -1,0 +1,23 @@
+# Copy to .env and fill in values. Never commit .env or real secrets.
+
+DJANGO_SECRET_KEY=your-django-secret-key-here
+DJANGO_DEBUG=True
+
+# Email
+EMAIL_HOST_USER=your-smtp-username
+EMAIL_HOST_PASSWORD=your-smtp-password
+
+# Razorpay
+RZP_CLIENT_ID=your-razorpay-client-id
+RZP_CLIENT_SECRET=your-razorpay-client-secret
+
+# Allowed Hosts (comma-separated)
+ALLOWED_HOSTS=*,127.0.0.1,localhost
+
+# AWS S3 (use placeholders only in this file)
+AWS_ACCESS_KEY_ID=your-aws-access-key-id
+AWS_SECRET_ACCESS_KEY=your-aws-secret-access-key
+AWS_STORAGE_BUCKET_NAME=your-bucket-name
+AWS_S3_CLIENT_TAG=kids-shelf
+AWS_S3_REGION_NAME=ap-southeast-2
+USE_S3=True
