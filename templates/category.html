@@ -265,38 +265,39 @@
                     {% endfor %}
                 </select>
             </div>
-
-            <!-- Drawer Actions -->
-            <div class="drawer-actions">
-                <a href="{% url 'store:product_list' %}" class="drawer-reset-btn">Reset</a>
-                <button type="submit" class="drawer-apply-btn">Apply Filters</button>
-            </div>
         </form>
+
+        <!-- Drawer Actions - FIXED OUTSIDE FORM -->
+        <div class="drawer-actions">
+            <a href="{% url 'store:product_list' %}" class="drawer-reset-btn">Reset</a>
+            <button type="submit" class="drawer-apply-btn" form="mobileFilterForm">Apply Filters</button>
+        </div>
     </div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-// Filter Drawer Toggle
+// Filter Drawer Toggle - PERFECT IMPLEMENTATION
 document.addEventListener('DOMContentLoaded', function() {
     const openBtn = document.getElementById('openFilterDrawer');
     const closeBtn = document.getElementById('closeFilterDrawer');
     const drawer = document.getElementById('filterDrawer');
     const overlay = document.getElementById('filterDrawerOverlay');
     
-    if (openBtn && drawer && overlay) {
+    if (openBtn && drawer && overlay && closeBtn) {
         // Open drawer
-        openBtn.addEventListener('click', function() {
+        openBtn.addEventListener('click', function(e) {
+            e.preventDefault();
             drawer.classList.add('active');
             overlay.classList.add('active');
-            document.body.style.overflow = 'hidden';
+            document.body.classList.add('drawer-open');
         });
         
         // Close drawer
         const closeDrawer = function() {
             drawer.classList.remove('active');
             overlay.classList.remove('active');
-            document.body.style.overflow = '';
+            document.body.classList.remove('drawer-open');
         };
         
         closeBtn.addEventListener('click', closeDrawer);
@@ -307,6 +308,11 @@ document.addEventListener('DOMContentLoaded', function() {
             if (e.key === 'Escape' && drawer.classList.contains('active')) {
                 closeDrawer();
             }
+        });
+        
+        // Prevent drawer close when clicking inside drawer
+        drawer.addEventListener('click', function(e) {
+            e.stopPropagation();
         });
     }
 });

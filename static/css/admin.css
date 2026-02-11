@@ -954,3 +954,52 @@ select.form-control {
     gap: 1.5rem;
 }
 
+/* ============================================
+   ADMIN FOOTER - SOCIAL LINKS (on all admin pages)
+   ============================================ */
+
+.admin-footer {
+    margin-top: auto;
+    padding: 1rem 2rem;
+    background: var(--gray-800);
+    color: rgba(255, 255, 255, 0.9);
+    border-top: 1px solid var(--gray-700);
+}
+
+.admin-footer-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+.admin-footer-brand {
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+
+.admin-footer-social {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.admin-social-link {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.15);
+    color: white;
+    border-radius: 50%;
+    transition: var(--transition);
+}
+
+.admin-social-link:hover {
+    background: var(--primary);
+    color: white;
+    transform: translateY(-2px);
+}
+

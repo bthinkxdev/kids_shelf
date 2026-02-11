@@ -71,12 +71,10 @@
             
             <div class="age-selector-grid">
                 {% for age in age_groups %}
-                <a href="{% url 'store:product_list' %}?age_group={{ age.value }}" class="age-card">
-                    <div class="age-heart" style="--heart-color: {{ age.color }};">
-                        <div class="heart-inner">
-                            <span class="age-emoji">{{ age.emoji }}</span>
-                            <span class="age-range">{{ age.value }}</span>
-                        </div>
+                <a href="{% url 'store:product_list' %}?age_group={{ age.value }}" class="age-card" aria-label="Books for {{ age.label }}">
+                    <div class="age-card-inner">
+                        <span class="age-emoji">{{ age.emoji }}</span>
+                        <span class="age-range">{{ age.label }}</span>
                     </div>
                 </a>
                 {% endfor %}
@@ -120,7 +118,7 @@
                         </svg>
                     </div>
                     <h3 class="feature-title">Support Online</h3>
-                    <p class="feature-description">Need help choosing? Our stylists are just a message away.</p>
+                    <p class="feature-description">Need help choosing? We're just a message away.</p>
                 </div>
             </div>
         </div>
@@ -136,11 +134,11 @@
             <div class="featured-products-grid">
                 {% for product in featured_products %}
                     <div class="featured-product-card">
-                        {% if product.discount_percent %}
-                            <span class="featured-product-badge">{{ product.discount_percent }}% OFF</span>
-                        {% endif %}
                         <a href="{% url 'store:product_detail' product.slug %}" class="featured-product-link">
                             <div class="featured-product-image">
+                                {% if product.discount_percent %}
+                                    <span class="featured-product-badge">{{ product.discount_percent }}% OFF</span>
+                                {% endif %}
                                 {% with image=product.images.first %}
                                     {% if image %}
                                         <img src="{{ image.image.url }}" alt="{{ product.name }}" loading="lazy">
@@ -213,9 +211,9 @@
                 <div class="bestsellers-grid">
                     {% for product in bestseller_products %}
                         <div class="bestseller-card">
-                                <span class="bestseller-rank">#{{ forloop.counter }}</span> 
                             <a href="{% url 'store:product_detail' product.slug %}" class="bestseller-link">
                                 <div class="bestseller-image">
+                                    <span class="bestseller-rank">#{{ forloop.counter }}</span>
                                     {% with image=product.images.first %}
                                         {% if image %}
                                             <img src="{{ image.image.url }}" alt="{{ product.name }}" loading="lazy">

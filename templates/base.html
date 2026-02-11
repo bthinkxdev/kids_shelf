@@ -8,12 +8,23 @@
     <meta name="description" content="{% block meta_description %}Discover magical children's books for all ages. Picture books, early readers, chapter books, and young adult novels.{% endblock %}">
     <meta name="keywords" content="children's books, kids books, picture books, early readers, chapter books, young adult books">
     <meta name="theme-color" content="#FF6B9D">
-    <link rel="stylesheet" href="{% static 'css/style.css' %}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300;400;500;600;700&family=Nunito:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <!-- New Design System -->
+    <link rel="stylesheet" href="{% static 'css/design-system.css' %}">
+    <link rel="stylesheet" href="{% static 'css/navigation.css' %}">
+    <link rel="stylesheet" href="{% static 'css/components.css' %}">
+    <link rel="stylesheet" href="{% static 'css/pages.css' %}">
+    <!-- Legacy styles (will be phased out) -->
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <link rel="stylesheet" href="{% static 'css/mobile-optimizations.css' %}">
     {% block extra_css %}{% endblock %}
+    <!-- Professional Overhaul - Load Last for Override -->
+    <link rel="stylesheet" href="{% static 'css/professional-overhaul.css' %}">
 </head>
 <body>
+    <div id="page-wrap">
     <header class="header">
         <nav class="header-main">
             <div class="container">
@@ -186,6 +197,7 @@
             </div>
         </div>
     </footer>
+    </div><!-- /#page-wrap -->
 
     <div class="social-fab-container">
         <button class="social-fab-toggle" id="socialToggle" aria-label="Toggle social media">
