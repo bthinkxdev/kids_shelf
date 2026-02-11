@@ -1,0 +1,167 @@
+{% extends "admin/base.html" %}
+{% load static %}
+
+{% block title %}{{ form_title }}{% endblock %}
+{% block page_title %}{{ form_title }}{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width: 800px;">
+    <div class="card-header">
+        <h3 class="card-title">{{ form_title }}</h3>
+    </div>
+
+    <div class="card-body">
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            
+            <div class="form-group">
+                <label class="form-label">Age *</label>
+                <input type="text" name="name" class="form-control" placeholder="e.g., 0-2 Years" 
+                    value="{{ form.instance.name|default:'' }}" required>
+                {% if form.name.errors %}
+                    <div style="color: var(--danger); font-size: 0.875rem; margin-top: 0.25rem;">
+                        {{ form.name.errors }}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Emoji</label>
+                <input type="text" name="emoji" class="form-control" placeholder="👶" 
+                    value="{{ form.instance.emoji|default:'📚' }}" maxlength="10">
+                <small class="text-muted">Single emoji for visual display</small>
+                {% if form.emoji.errors %}
+                    <div style="color: var(--danger); font-size: 0.875rem; margin-top: 0.25rem;">
+                        {{ form.emoji.errors }}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Display Order</label>
+                <input type="number" name="display_order" class="form-control" placeholder="0" 
+                    value="{{ form.instance.display_order|default:0 }}" min="0">
+                <small class="text-muted">Lower numbers appear first</small>
+                {% if form.display_order.errors %}
+                    <div style="color: var(--danger); font-size: 0.875rem; margin-top: 0.25rem;">
+                        {{ form.display_order.errors }}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                <div class="form-check">
+                    <input type="checkbox" name="is_active" class="form-check-input" id="is_active" 
+                        {% if form.instance.is_active %}checked{% endif %}>
+                    <label class="form-check-label" for="is_active">Active</label>
+                </div>
+                {% if form.is_active.errors %}
+                    <div style="color: var(--danger); font-size: 0.875rem; margin-top: 0.25rem;">
+                        {{ form.is_active.errors }}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="d-flex gap-2" style="justify-content: flex-end; margin-top: 2rem;">
+                <a href="{% url 'admin_panel:age_group_list' %}" class="btn btn-secondary">
+                    <i class="fas fa-times"></i> Cancel
+                </a>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save"></i> Save Age Group
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // File size validation
+    const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB in bytes
+    
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+    }
+    
+    function validateFileSize(fileInput) {
+        const file = fileInput.files[0];
+        if (file) {
+            if (file.size > MAX_FILE_SIZE) {
+                alert(`Image file size cannot exceed 5MB.\n\nSelected file: ${file.name}\nFile size: ${formatFileSize(file.size)}\n\nPlease choose a smaller image or compress it before uploading.`);
+                fileInput.value = '';
+                return false;
+            }
+            
+            if (!file.type.startsWith('image/')) {
+                alert(`Please upload a valid image file.\n\nSelected file: ${file.name}\nFile type: ${file.type}\n\nAccepted formats: JPG, PNG, GIF, WebP`);
+                fileInput.value = '';
+                return false;
+            }
+        }
+        return true;
+    }
+    
+    // Add validation to file input
+    const fileInput = document.querySelector('input[type="file"]');
+    if (fileInput) {
+        fileInput.addEventListener('change', function() {
+            validateFileSize(this);
+        });
+    }
+    
+    // Auto-generate slug from name field
+    const nameInput = document.getElementById('{{ form.name.id_for_label }}');
+    const slugInput = document.getElementById('{{ form.slug.id_for_label }}');
+    
+    if (nameInput && slugInput) {
+        // Flag to track if slug was manually modified
+        let slugManuallyModified = false;
+        
+        // Function to generate slug
+        function generateSlug(text) {
+            if (!text) return '';
+            
+            return text
+                .toString()
+                .toLowerCase()
+                .trim()
+                .replace(/[^\w\s-]/g, '') // Remove special characters
+                .replace(/[\s_-]+/g, '-') // Replace spaces, underscores, and hyphens with single hyphen
+                .replace(/^-+|-+$/g, ''); // Remove leading/trailing hyphens
+        }
+        
+        // Auto-generate slug when name changes
+        nameInput.addEventListener('input', function() {
+            if (!slugManuallyModified) {
+                slugInput.value = generateSlug(this.value);
+            }
+        });
+        
+        // Track manual modifications to slug
+        slugInput.addEventListener('input', function() {
+            const generatedSlug = generateSlug(nameInput.value);
+            slugManuallyModified = this.value !== generatedSlug;
+        });
+        
+        // Clear flag when form is reset
+        const form = nameInput.closest('form');
+        if (form) {
+            form.addEventListener('reset', function() {
+                slugManuallyModified = false;
+            });
+        }
+        
+        // Initialize slug if name already has value
+        if (nameInput.value && !slugInput.value) {
+            slugInput.value = generateSlug(nameInput.value);
+        }
+    }
+});
+</script>
+{% endblock %}

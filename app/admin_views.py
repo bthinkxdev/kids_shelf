@@ -314,15 +314,25 @@ class ProductCreateView(StaffRequiredMixin, CreateView):
         image_formset = context["image_formset"]
         format_formset = context["format_formset"]
         
-        if image_formset.is_valid() and format_formset.is_valid():
-            self.object = form.save()
-            image_formset.instance = self.object
-            image_formset.save()
-            format_formset.instance = self.object
-            format_formset.save()
-            messages.success(self.request, "Book created successfully!")
-            return redirect(self.success_url) 
-        else:
+        if not (image_formset.is_valid() and format_formset.is_valid()):
+            for error in image_formset.non_form_errors():
+                messages.error(self.request, error)
+            for error in format_formset.non_form_errors():
+                messages.error(self.request, error)
+            return self.form_invalid(form)
+        
+        from django.db import transaction
+        try:
+            with transaction.atomic():
+                self.object = form.save()
+                image_formset.instance = self.object
+                image_formset.save()
+                format_formset.instance = self.object
+                format_formset.save()
+                messages.success(self.request, f"✅ Book '{self.object.name}' created!")
+                return redirect(self.success_url)
+        except Exception as e:
+            messages.error(self.request, f"❌ Error: {str(e)}")
             return self.form_invalid(form)
 
 
@@ -353,15 +363,25 @@ class ProductUpdateView(StaffRequiredMixin, UpdateView):
         image_formset = context["image_formset"]
         format_formset = context["format_formset"]
         
-        if image_formset.is_valid() and format_formset.is_valid():
-            self.object = form.save()
-            image_formset.instance = self.object
-            image_formset.save()
-            format_formset.instance = self.object
-            format_formset.save()
-            messages.success(self.request, "Book updated successfully!")
-            return redirect(self.success_url)  
-        else:
+        if not (image_formset.is_valid() and format_formset.is_valid()):
+            for error in image_formset.non_form_errors():
+                messages.error(self.request, error)
+            for error in format_formset.non_form_errors():
+                messages.error(self.request, error)
+            return self.form_invalid(form)
+        
+        from django.db import transaction
+        try:
+            with transaction.atomic():
+                self.object = form.save()
+                image_formset.instance = self.object
+                image_formset.save()
+                format_formset.instance = self.object
+                format_formset.save()
+                messages.success(self.request, f"✅ Book '{self.object.name}' updated!")
+                return redirect(self.success_url)
+        except Exception as e:
+            messages.error(self.request, f"❌ Error: {str(e)}")
             return self.form_invalid(form)
 
 
@@ -371,6 +391,27 @@ class ProductDeleteView(StaffRequiredMixin, DeleteView):
     
     def post(self, request, *args, **kwargs):
         product = self.get_object()
+        
+        # Check if product has orders
+        if product.order_items.exists():
+            messages.error(
+                request, 
+                f"Cannot delete '{product.name}' because it has been ordered. "
+                "Deactivate it instead by editing and unchecking 'Active'."
+            )
+            return redirect("admin_panel:product_list")
+        
+        # Check if product formats are in any carts
+        if product.cart_items.exists():
+            messages.error(
+                request,
+                f"Cannot delete '{product.name}' because it's currently in {product.cart_items.count()} cart(s). "
+                "Wait for customers to checkout or clear their carts, or deactivate the product instead."
+            )
+            return redirect("admin_panel:product_list")
+        
+        # Safe to delete - no orders, no carts
+        product.formats.all().delete()  # Delete formats first
         messages.success(request, f"Product '{product.name}' deleted successfully!")
         return super().post(request, *args, **kwargs)
 
@@ -491,3 +532,60 @@ class MessageToggleResolvedView(StaffRequiredMixin, View):
         
         return redirect("admin_panel:message_list")
 
+# Age Group Management Views
+class AgeGroupListView(StaffRequiredMixin, ListView):
+    model = AgeGroup
+    template_name = "admin/age_group_list.html"
+    context_object_name = "age_groups"
+    
+    def get_queryset(self):
+        return AgeGroup.objects.all().order_by('display_order')
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["active_menu"] = "age_groups"
+        return context
+
+
+class AgeGroupCreateView(StaffRequiredMixin, CreateView):
+    model = AgeGroup
+    fields = ['name', 'emoji', 'display_order', 'is_active']
+    template_name = "admin/age_group_form.html"
+    success_url = reverse_lazy("admin_panel:age_group_list")
+    
+    def form_valid(self, form):
+        messages.success(self.request, "Age group created successfully!")
+        return super().form_valid(form)
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["active_menu"] = "age_groups"
+        context["form_title"] = "Create Age Group"
+        return context
+
+
+class AgeGroupUpdateView(StaffRequiredMixin, UpdateView):
+    model = AgeGroup
+    fields = ['name', 'emoji', 'display_order', 'is_active']
+    template_name = "admin/age_group_form.html"
+    success_url = reverse_lazy("admin_panel:age_group_list")
+    
+    def form_valid(self, form):
+        messages.success(self.request, "Age group updated successfully!")
+        return super().form_valid(form)
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["active_menu"] = "age_groups"
+        context["form_title"] = "Edit Age Group"
+        return context
+
+
+class AgeGroupDeleteView(StaffRequiredMixin, DeleteView):
+    model = AgeGroup
+    success_url = reverse_lazy("admin_panel:age_group_list")
+    
+    def post(self, request, *args, **kwargs):
+        age_group = self.get_object()
+        messages.success(request, f"Age group '{age_group.name}' deleted successfully!")
+        return super().post(request, *args, **kwargs)

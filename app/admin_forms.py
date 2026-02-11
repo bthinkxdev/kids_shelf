@@ -1,5 +1,5 @@
 from django import forms
-from django.forms import inlineformset_factory
+from django.forms import inlineformset_factory, BaseInlineFormSet
 
 from .models import Category, Product, ProductImage, BookFormat, AgeGroup
 
@@ -167,17 +167,49 @@ class ProductImageForm(forms.ModelForm):
         
         return image
 
+class ProductImageInlineFormSet(BaseInlineFormSet):
+    def clean(self):
+        if any(self.errors):
+            return
+        image_count = sum(1 for form in self.forms 
+                         if form.cleaned_data and not form.cleaned_data.get('DELETE', False) 
+                         and (form.cleaned_data.get('image') or (form.instance and form.instance.pk)))
+        if image_count == 0:
+            raise forms.ValidationError('⚠️ At least one product image is required.')
+
+
+class BookFormatInlineFormSet(BaseInlineFormSet):
+    def clean(self):
+        if any(self.errors):
+            return
+        skus = []
+        format_types = []
+        
+        for form in self.forms:
+            if form.cleaned_data and not form.cleaned_data.get('DELETE', False):
+                sku = form.cleaned_data.get('sku')
+                format_type = form.cleaned_data.get('format_type')
+                
+                if sku:
+                    if sku in skus:
+                        raise forms.ValidationError(f'❌ Duplicate SKU: "{sku}". Please change one.')
+                    skus.append(sku)
+                    
+                    existing = BookFormat.objects.filter(sku=sku)
+                    if self.instance and self.instance.pk:
+                        existing = existing.exclude(product=self.instance)
+                    if existing.exists():
+                        raise forms.ValidationError(f'❌ SKU "{sku}" already used in "{existing.first().product.name}".')
+                
+                if format_type:
+                    if format_type in format_types:
+                        raise forms.ValidationError(f'❌ Duplicate format: {dict(BookFormat._meta.get_field("format_type").choices)[format_type]}')
+                    format_types.append(format_type)
 
 ProductImageFormSet = inlineformset_factory(
-    Product,
-    ProductImage,
-    form=ProductImageForm,
-    extra=3,  # Show 3 empty forms by default
-    can_delete=True,
-    max_num=5,  # Allow up to 5 images maximum
-    validate_max=True,  # Enforce maximum limit
+    Product, ProductImage, form=ProductImageForm, formset=ProductImageInlineFormSet,
+    extra=3, can_delete=True, max_num=5, validate_max=True,
 )
-
 
 class BookFormatForm(forms.ModelForm):
     class Meta:
@@ -191,10 +223,6 @@ class BookFormatForm(forms.ModelForm):
         }
 
 BookFormatFormSet = inlineformset_factory(
-    Product,
-    BookFormat,
-    form=BookFormatForm,
-    extra=2,
-    can_delete=True,
-    max_num=4,  
+    Product, BookFormat, form=BookFormatForm, formset=BookFormatInlineFormSet,
+    extra=2, can_delete=True, max_num=4,
 )

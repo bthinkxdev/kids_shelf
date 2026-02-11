@@ -349,10 +349,8 @@
                             <span>Subtotal</span>
                             <span>₹{{ totals.subtotal }}</span>
                         </div>
-                        <div class="summary-row">
-                            <span>Shipping</span>
+                            <span>Shipping {% if totals.subtotal < 599 %}<small style="color: var(--gray-500); font-size: 12px;">(Free above ₹599)</small>{% endif %}</span>
                             <span>{% if totals.shipping == 0 %}FREE 🎉{% else %}₹{{ totals.shipping }}{% endif %}</span>
-                        </div>
                         <div class="summary-row">
                             <span>Total</span>
                             <span>₹{{ totals.total }}</span>

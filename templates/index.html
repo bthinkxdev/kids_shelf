@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load static %}
-{% block title %}Kids Shelf - Premium Women & Babies {% endblock %}
-{% block meta_description %}Shop the latest collection of women's nightwear, loungewear, and babies dresses at Kids Shelf.{% endblock %}
+{% block title %}Kids Shelf - Preloved imported books for kids {% endblock %}
+{% block meta_description %}New/Preloved imported books for kids aged 6 months to 10 years{% endblock %}
 {% block content %}
     <section class="banner-section">
         <div class="banner-slider" id="bannerSlider">
@@ -20,7 +20,7 @@
                     Today
                 </h1>
                 <p class="hero-description">
-                    Discover endless wonder and joy in every page. Magical kids' books and charming stories crafted with love…
+                    New/Preloved imported books for kids aged 6 months to 10 years crafted with love…
                 </p>
                 <div class="hero-actions">
                     <a href="{% url 'store:product_list' %}" class="btn btn-primary">
@@ -163,29 +163,22 @@
                                     {% if product.original_price and product.original_price > product.price %}
                                         <span class="original-price">₹{{ product.original_price }}</span>
                                         <span class="current-price">₹{{ product.price }}</span>
-                                        {% if product.discount_percent > 0 %}
+                                        {% comment %} {% if product.discount_percent > 0 %}
                                             <span class="discount-badge">{{ product.discount_percent }}% OFF</span>
-                                        {% endif %}
+                                        {% endif %} {% endcomment %}
                                     {% else %}
                                         <span class="current-price">₹{{ product.price }}</span>
                                     {% endif %}
                                 </div>
                             </div>
                         </a>
-                        {% with variant=product.variants.first %}
-                            {% if variant %}
-                                <button class="featured-add-to-cart js-add-to-cart"
-                                        data-product-id="{{ product.id }}"
-                                        data-size="{{ variant.size }}"
-                                        data-color="{{ variant.color }}">
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <path d="M9 2L7.17 4M16.84 4L15 2M12 10V14M8 14H16"/>
-                                    </svg>
-                                    Add to Cart
-                                </button>
-                            {% else %}
-                                <span class="featured-add-to-cart" style="opacity: 0.6; cursor: not-allowed;">Out of Stock</span>
-                            {% endif %}
+                        {% with format=product.formats.first %}
+                            <button class="featured-add-to-cart" onclick="location.href='{% url 'store:product_detail' product.slug %}'">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M12 5v14M5 12h14"/>
+                                </svg>
+                                View Details
+                            </button>
                         {% endwith %}
                     </div>
                 {% empty %}
@@ -220,7 +213,7 @@
                 <div class="bestsellers-grid">
                     {% for product in bestseller_products %}
                         <div class="bestseller-card">
-                            <span class="bestseller-rank">#{{ forloop.counter }}</span>
+                                <span class="bestseller-rank">#{{ forloop.counter }}</span> 
                             <a href="{% url 'store:product_detail' product.slug %}" class="bestseller-link">
                                 <div class="bestseller-image">
                                     {% with image=product.images.first %}
@@ -257,17 +250,10 @@
                                     </div>
                                 </div>
                             </a>
-                            {% with variant=product.variants.first %}
-                                {% if variant %}
-                                    <button class="bestseller-add-to-cart js-add-to-cart"
-                                            data-product-id="{{ product.id }}"
-                                            data-size="{{ variant.size }}"
-                                            data-color="{{ variant.color }}">
-                                        Add to Cart
-                                    </button>
-                                {% else %}
-                                    <span class="bestseller-add-to-cart" style="opacity: 0.6; cursor: not-allowed;">Out of Stock</span>
-                                {% endif %}
+                            {% with format=product.formats.first %}
+                            <button class="bestseller-add-to-cart" onclick="location.href='{% url 'store:product_detail' product.slug %}'">
+                                    View Details
+                                </button>
                             {% endwith %}
                         </div>
                     {% endfor %}
@@ -277,7 +263,7 @@
     </section>
 
     <!-- Customer Stories Section -->
-    <section class="section section-stories">
+    {% comment %} <section class="section section-stories">
         <div class="container">
             <div class="section-header">
                 <h2 class="section-title">Real voices. Real looks. Real stories.</h2>
@@ -360,7 +346,7 @@
                 </div>
             </div>
         </div>
-    </section>
+    </section> {% endcomment %}
 
     <!-- Testimonials Section -->
     <section class="section section-testimonials">

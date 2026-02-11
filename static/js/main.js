@@ -267,3 +267,51 @@ if (socialToggle && socialMenu) {
         socialMenu.classList.toggle('active');
     });
 }
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Only target notifications inside the product detail section
+    const staticNotification = document.querySelector('.product-detail .notification.error');
+    
+    if (staticNotification) {
+        const message = staticNotification.textContent.trim();
+        
+        // Remove ONLY this specific notification
+        staticNotification.remove();
+        
+        // Show it using the proper notification system
+        showNotification(message, 'error');
+    }
+});
+
+// Product Form Debug
+document.addEventListener('DOMContentLoaded', function() {
+    const productForm = document.querySelector('form');
+    
+    if (productForm) {
+        productForm.addEventListener('submit', function(e) {
+            console.log('=== FORM SUBMISSION DEBUG ===');
+            
+            // Check SKUs
+            const skuInputs = document.querySelectorAll('input[name*="sku"]');
+            const skus = [];
+            
+            skuInputs.forEach((input, index) => {
+                if (input.value) {
+                    console.log(`Format ${index} SKU:`, input.value);
+                    skus.push(input.value);
+                }
+            });
+            
+            // Check for duplicates
+            const duplicates = skus.filter((item, index) => skus.indexOf(item) !== index);
+            if (duplicates.length > 0) {
+                console.error('DUPLICATE SKUs DETECTED:', duplicates);
+                alert(`Duplicate SKU(s) detected: ${duplicates.join(', ')}\n\nEach SKU must be unique!`);
+                e.preventDefault();
+                return false;
+            }
+            
+            console.log('Form validation passed');
+        });
+    }
+});

@@ -33,5 +33,11 @@ urlpatterns = [
     # Messages
     path("messages/", admin_views.MessageListView.as_view(), name="message_list"),
     path("messages/<int:pk>/toggle-resolved/", admin_views.MessageToggleResolvedView.as_view(), name="message_toggle_resolved"),
+
+    # Age Groups
+    path('age-groups/', admin_views.AgeGroupListView.as_view(), name='age_group_list'),
+    path('age-groups/create/', admin_views.AgeGroupCreateView.as_view(), name='age_group_create'),
+    path('age-groups/<int:pk>/edit/', admin_views.AgeGroupUpdateView.as_view(), name='age_group_update'),
+    path('age-groups/<int:pk>/delete/', admin_views.AgeGroupDeleteView.as_view(), name='age_group_delete'),
 ]
 

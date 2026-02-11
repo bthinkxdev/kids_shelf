@@ -130,20 +130,39 @@ class ProductDetailView(DetailView):
     slug_url_kwarg = "slug"
 
     def get_queryset(self):
-        return (
-            Product.objects.active()
-            .select_related("category")
-            .prefetch_related(
-                Prefetch("images", queryset=ProductImage.objects.order_by("-is_primary", "id")),
-                Prefetch("formats", queryset=BookFormat.objects.filter(is_active=True, stock_quantity__gt=0)),
-            )
-        )
+        # Admin can see ALL products, customers only see active
+        if self.request.user.is_staff:
+            return Product.objects.all()
+        return Product.objects.active()
+    
+    def get(self, request, *args, **kwargs):
+        from django.http import Http404
+        
+        try:
+            self.object = self.get_object()
+        except Http404:
+            messages.warning(request, "This product is no longer available.")
+            return redirect('store:product_list')
+        
+        # If customer tries to view inactive product
+        if not self.object.is_active and not request.user.is_staff:
+            messages.warning(request, "This product is currently unavailable.")
+            return redirect('store:product_list')
+        
+        context = self.get_context_data(object=self.object)
+        return self.render_to_response(context)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         product = context["product"]
-        formats = list(product.formats.all())
-        context["formats"] = formats
+        
+        # Get ALL active formats (don't filter by stock here)
+        all_formats = product.formats.filter(is_active=True)
+        context["formats"] = list(all_formats)
+        
+        # Check if any format has stock
+        context["has_stock"] = all_formats.filter(stock_quantity__gt=0).exists()
+        
         context["related_products"] = (
             Product.objects.active()
             .filter(category=product.category)
@@ -154,24 +173,32 @@ class ProductDetailView(DetailView):
         context["active_page"] = "collection"
         return context
 
-
 class CartView(LoginRequiredForActionMixin, TemplateView):
     template_name = "cart.html"
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         cart = CartService.get_or_create_cart(self.request)
+        
+        inactive_items = cart.items.filter(product__is_active=False)
+        if inactive_items.exists():
+            count = inactive_items.count()
+            inactive_items.delete()
+            messages.warning(
+                self.request, 
+                f"{count} unavailable item(s) removed from your cart."
+            )
+        
         items = cart.items.select_related("product", "variant").prefetch_related("product__images").all()
         totals = CartService.compute_totals(cart)
-        context.update(
-            {
-                "cart": cart,
-                "items": items,
-                "totals": totals,
-                "update_form": CartUpdateForm(),
-                "active_page": "cart",
-            }
-        )
+        
+        context.update({
+            "cart": cart,
+            "items": items,
+            "totals": totals,
+            "update_form": CartUpdateForm(),
+            "active_page": "cart",
+        })
         return context
 
 
@@ -218,7 +245,7 @@ class AddToCartView(LoginRequiredForActionMixin, View):
         else:
             messages.success(request, "Added to cart.")
             if is_ajax:
-                cart_count = sum(item.quantity for item in cart.items.all())
+                cart_count = cart.items.count()
                 return JsonResponse({"success": True, "cart_count": cart_count})
         action = request.POST.get("action", "add")
         if action == "buy":
@@ -270,8 +297,18 @@ class CheckoutView(LoginRequiredForActionMixin, TemplateView):
         if not cart.items.exists():
             messages.info(request, "Your cart is empty.")
             return redirect("store:cart")
+        
+        # Check for inactive products
+        inactive_items = cart.items.filter(product__is_active=False)
+        if inactive_items.exists():
+            inactive_items.delete()
+            messages.error(
+                request, 
+                "Some items are no longer available and have been removed. Please review your cart."
+            )
+            return redirect("store:cart")
+        
         return super().dispatch(request, *args, **kwargs)
-
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         cart = CartService.get_or_create_cart(self.request)
