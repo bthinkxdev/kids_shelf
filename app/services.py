@@ -6,6 +6,7 @@ from django.db import transaction
 from django.db.models import F
 from django.template.loader import render_to_string
 from django.utils.crypto import get_random_string
+import logging
 
 from .models import Address, Cart, CartItem, Order, OrderItem, Payment, BookFormat
 
@@ -74,80 +75,250 @@ class CartTotals:
 class CartService:
     @staticmethod
     def _ensure_session_key(request):
+        """✅ ROBUSTNESS: Ensure session exists"""
         if not request.session.session_key:
             request.session.save()
         return request.session.session_key
 
     @classmethod
     def get_or_create_cart(cls, request):
-        user = request.user if request.user.is_authenticated else None
-        if user:
-            cart, _ = Cart.objects.get_or_create(user=user, status=Cart.Status.ACTIVE)
+        """✅ ROBUSTNESS: Get cart with fallback"""
+        try:
+            user = request.user if request.user.is_authenticated else None
+            if user:
+                cart, _ = Cart.objects.get_or_create(user=user, status=Cart.Status.ACTIVE)
+                return cart
+            session_key = cls._ensure_session_key(request)
+            cart, _ = Cart.objects.get_or_create(session_key=session_key, status=Cart.Status.ACTIVE)
             return cart
-        session_key = cls._ensure_session_key(request)
-        cart, _ = Cart.objects.get_or_create(session_key=session_key, status=Cart.Status.ACTIVE)
-        return cart
+        except Exception as e:
+            raise CartError(f"Failed to get cart: {str(e)}")
 
     @classmethod
     def merge_carts(cls, user, session_key):
+        """✅ ROBUSTNESS: Merge guest cart into user cart safely"""
         if not user or not session_key:
             return
+        
         try:
             session_cart = Cart.objects.get(session_key=session_key, status=Cart.Status.ACTIVE)
         except Cart.DoesNotExist:
             return
-        user_cart, _ = Cart.objects.get_or_create(user=user, status=Cart.Status.ACTIVE)
-        for item in session_cart.items.all():
-            cls.add_item(user_cart, item.variant, item.quantity)
-        session_cart.status = Cart.Status.ABANDONED
-        session_cart.save(update_fields=["status"])
+        
+        try:
+            user_cart, _ = Cart.objects.get_or_create(user=user, status=Cart.Status.ACTIVE)
+            
+            for item in session_cart.items.select_related('product', 'variant').all():
+                # ✅ ROBUSTNESS: Skip items with missing variant
+                if not item.variant:
+                    continue
+                
+                # ✅ ROBUSTNESS: Skip if variant no longer available
+                if not item.variant.is_available():
+                    continue
+                
+                try:
+                    cls.add_item(user_cart, item.variant, item.quantity)
+                except (StockError, CartError):
+                    # ✅ ROBUSTNESS: Continue merging even if one item fails
+                    continue
+            
+            session_cart.status = Cart.Status.ABANDONED
+            session_cart.save(update_fields=["status"])
+        except Exception as e:
+            # ✅ ROBUSTNESS: Log error but don't crash
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Cart merge failed: {str(e)}")
 
     @staticmethod
     def compute_totals(cart):
-        subtotal = sum(item.line_total for item in cart.items.select_related("product"))
-        shipping_threshold = getattr(settings, "FREE_SHIPPING_THRESHOLD", 999)
-        shipping_fee = getattr(settings, "FLAT_SHIPPING_FEE", 50)
-        shipping = 0 if subtotal >= shipping_threshold else shipping_fee
-        total = subtotal + shipping
-        return CartTotals(subtotal=subtotal, shipping=shipping, total=total)
+        """✅ ROBUSTNESS: Calculate totals with error handling"""
+        try:
+            subtotal = sum(
+                item.line_total 
+                for item in cart.items.select_related("product").all()
+            )
+            shipping_threshold = getattr(settings, "FREE_SHIPPING_THRESHOLD", 999)
+            shipping_fee = getattr(settings, "FLAT_SHIPPING_FEE", 50)
+            shipping = 0 if subtotal >= shipping_threshold else shipping_fee
+            total = subtotal + shipping
+            return CartTotals(subtotal=subtotal, shipping=shipping, total=total)
+        except Exception as e:
+            logging.getLogger(__name__).error(f"compute_totals failed: {e}", exc_info=True)
+            return CartTotals(subtotal=0, shipping=0, total=0)
 
     @staticmethod
     def add_item(cart, variant, quantity):
-        if not variant.is_active or variant.stock_quantity <= 0:
-            raise StockError("This item is out of stock.")
+        """
+        ✅ ROBUSTNESS: Add item to cart with comprehensive validation.
+        Raises StockError if item unavailable.
+        Raises CartError for other failures.
+        """
+        # ✅ ROBUSTNESS: Validate variant exists
+        if not variant:
+            raise CartError("Book format is required.")
+        
+        # ✅ ROBUSTNESS: Check if variant is available
+        if not variant.is_available():
+            raise StockError("This format is out of stock or no longer available.")
+        
+        # ✅ ROBUSTNESS: Validate quantity
         max_qty = getattr(settings, "MAX_CART_QTY", 10)
-        quantity = max(1, min(quantity, max_qty))
-        if quantity > variant.stock_quantity:
-            raise StockError("Requested quantity exceeds available stock.")
-        item = CartItem.objects.filter(cart=cart, variant=variant).first()
-        if item:
-            new_quantity = min(item.quantity + quantity, max_qty)
-            if new_quantity > variant.stock_quantity:
-                raise StockError("Requested quantity exceeds available stock.")
-            item.quantity = new_quantity
-            item.unit_price = variant.product.price
-            item.save(update_fields=["quantity", "unit_price", "updated_at"])
-            return item
-        return CartItem.objects.create(
-            cart=cart,
-            variant=variant,
-            product=variant.product,
-            quantity=quantity,
-            unit_price=variant.product.price,
-        )
+        try:
+            quantity = int(quantity)
+            quantity = max(1, min(quantity, max_qty))
+        except (TypeError, ValueError):
+            raise CartError("Invalid quantity.")
+        
+        # ✅ ROBUSTNESS: Check stock availability
+        if not variant.can_fulfill_quantity(quantity):
+            raise StockError(
+                f"Only {variant.stock_quantity} available. "
+                f"You requested {quantity}."
+            )
+        
+        try:
+            # ✅ ROBUSTNESS: Get product safely
+            product = variant.product
+            if not product.is_active:
+                raise CartError("This book is no longer available.")
+            
+            # ✅ ROBUSTNESS: Check for existing item
+            item = CartItem.objects.filter(cart=cart, variant=variant).first()
+            
+            if item:
+                # Update existing item
+                new_quantity = min(item.quantity + quantity, max_qty)
+                
+                if not variant.can_fulfill_quantity(new_quantity):
+                    raise StockError(
+                        f"Only {variant.stock_quantity} available. "
+                        f"You already have {item.quantity} in cart."
+                    )
+                
+                item.quantity = new_quantity
+                item.unit_price = product.price
+                item.save(update_fields=["quantity", "unit_price", "updated_at"])
+                return item
+            
+            # Create new item
+            return CartItem.objects.create(
+                cart=cart,
+                variant=variant,
+                product=product,
+                quantity=quantity,
+                unit_price=product.price,
+            )
+        except StockError:
+            raise
+        except CartError:
+            raise
+        except Exception as e:
+            raise CartError(f"Failed to add to cart: {str(e)}")
 
     @staticmethod
     def update_item(item, quantity):
-        if quantity <= 0:
-            item.delete()
-            return
-        max_qty = getattr(settings, "MAX_CART_QTY", 10)
-        quantity = min(quantity, max_qty)
-        if quantity > item.variant.stock_quantity:
-            raise StockError("Requested quantity exceeds available stock.")
-        item.quantity = quantity
-        item.unit_price = item.variant.product.price
-        item.save(update_fields=["quantity", "unit_price", "updated_at"])
+        """✅ ROBUSTNESS: Update cart item with validation"""
+        try:
+            # ✅ ROBUSTNESS: Delete if quantity is 0
+            if quantity <= 0:
+                item.delete()
+                return
+            
+            # ✅ ROBUSTNESS: Validate variant exists
+            if not item.variant:
+                raise CartError("Invalid cart item.")
+            
+            # ✅ ROBUSTNESS: Check availability
+            if not item.variant.is_available():
+                raise StockError("This format is no longer available.")
+            
+            # ✅ ROBUSTNESS: Validate quantity
+            max_qty = getattr(settings, "MAX_CART_QTY", 10)
+            quantity = min(quantity, max_qty)
+            
+            if not item.variant.can_fulfill_quantity(quantity):
+                raise StockError(
+                    f"Only {item.variant.stock_quantity} available. "
+                    f"You requested {quantity}."
+                )
+            
+            item.quantity = quantity
+            item.unit_price = item.product.price
+            item.save(update_fields=["quantity", "unit_price", "updated_at"])
+        except StockError:
+            raise
+        except CartError:
+            raise
+        except Exception as e:
+            raise CartError(f"Failed to update cart: {str(e)}")
+    
+    @staticmethod
+    def validate_cart(cart):
+        """
+        ✅ ROBUSTNESS: Validate all items in cart before checkout.
+        Removes invalid items, updates quantities for low stock.
+        Returns dict with 'valid' bool and 'errors' list.
+        """
+        errors = []
+        items_to_remove = []
+        items_to_update = []
+        
+        for item in cart.items.select_related('product', 'variant').all():
+            # Check if variant exists
+            if not item.variant:
+                items_to_remove.append(item)
+                errors.append(f"{item.product.name}: Format missing")
+                continue
+            
+            # Check if product is active
+            if not item.product.is_active:
+                items_to_remove.append(item)
+                errors.append(f"{item.product.name}: No longer available")
+                continue
+            
+            # Check if variant is available
+            if not item.variant.is_available():
+                items_to_remove.append(item)
+                errors.append(f"{item.product.name} ({item.get_format_display()}): Out of stock")
+                continue
+            
+            # Check if quantity is available
+            if item.variant.stock_quantity < item.quantity:
+                if item.variant.stock_quantity > 0:
+                    # Reduce quantity to available
+                    items_to_update.append((item, item.variant.stock_quantity))
+                    errors.append(
+                        f"{item.product.name} ({item.get_format_display()}): "
+                        f"Reduced to {item.variant.stock_quantity} (low stock)"
+                    )
+                else:
+                    # Remove completely
+                    items_to_remove.append(item)
+                    errors.append(f"{item.product.name} ({item.get_format_display()}): Out of stock")
+        
+        # Remove invalid items
+        for item in items_to_remove:
+            try:
+                item.delete()
+            except Exception:
+                pass
+        
+        # Update quantities
+        for item, new_qty in items_to_update:
+            try:
+                item.quantity = new_qty
+                item.save(update_fields=['quantity'])
+            except Exception:
+                pass
+        
+        return {
+            'valid': len(errors) == 0,
+            'errors': errors,
+            'removed_count': len(items_to_remove),
+            'updated_count': len(items_to_update)
+        }
 
 
 class OrderService:
@@ -163,15 +334,33 @@ class OrderService:
     def create_order(cls, cart, form_data, user=None):
         items = (
             cart.items.select_related("variant", "product")
-            .select_for_update(of=("self", "variant"))
+            .select_for_update(of=("self",))
             .all()
         )
+        
         if not items:
             raise CartError("Cart is empty.")
 
         for item in items:
-            if item.quantity > item.variant.stock_quantity:
-                raise StockError(f"{item.product.name} is out of stock.")
+            # Check variant exists
+            if not item.variant:
+                raise CartError(f"{item.product.name}: Format missing. Please remove and re-add.")
+            
+            # Check product is active
+            if not item.product.is_active:
+                raise CartError(f"{item.product.name}: No longer available.")
+            
+            # Check variant is available
+            if not item.variant.is_available():
+                raise StockError(f"{item.product.name} ({item.get_format_display()}): Out of stock.")
+            
+            # Check quantity
+            if not item.variant.can_fulfill_quantity(item.quantity):
+                available = item.variant.stock_quantity
+                raise StockError(
+                    f"{item.product.name} ({item.get_format_display()}): "
+                    f"Only {available} available, you have {item.quantity} in cart."
+                )
 
         # Handle address - either use existing or create snapshot
         selected_address_id = form_data.get('selected_address')

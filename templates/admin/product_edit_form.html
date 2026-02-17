@@ -1,14 +1,14 @@
 {% extends "admin/base.html" %}
 {% load static %}
 
-{% block title %}{{ form_title }}{% endblock %}
-{% block page_title %}{{ form_title }}{% endblock %}
+{% block title %}Edit Book — {{ product.name }}{% endblock %}
+{% block page_title %}Edit Book{% endblock %}
 
 {% block extra_css %}
 <style>
-    .ks-create-wrapper { max-width: 900px; margin: 0 auto; padding: 0 1rem 2rem; }
+    .ks-edit-wrapper { max-width: 900px; margin: 0 auto; padding: 0 1rem 3rem; }
 
-    .create-section {
+    .edit-section {
         background: #fff;
         border: 1.5px solid #e5e7eb;
         border-radius: 14px;
@@ -16,13 +16,11 @@
         margin-bottom: 1.5rem;
         box-shadow: 0 2px 8px rgba(0,0,0,.05);
     }
-    .create-section.hidden { display: none !important; }
 
     .sec-head {
         display: flex; align-items: center; gap: .85rem;
         margin-bottom: 1.5rem; padding-bottom: 1rem;
-        border-bottom: 2px solid #f3f4f6;
-        position: relative;
+        border-bottom: 2px solid #f3f4f6; position: relative;
     }
     .sec-head::after {
         content: ''; position: absolute; bottom: -2px; left: 0;
@@ -40,13 +38,13 @@
     }
     .sec-title h4 { margin: 0; font-size: 1.0625rem; font-weight: 700; color: #111827; }
     .sec-title p  { margin: .2rem 0 0; font-size: .8125rem; color: #6b7280; }
-
-    .section-num {
-        display: inline-flex; align-items: center; justify-content: center;
-        width: 1.5rem; height: 1.5rem; border-radius: 50%;
-        background: var(--primary,#6d4c41); color: #fff;
-        font-size: .75rem; font-weight: 700; flex-shrink: 0;
+    .sec-badge {
+        padding: .35rem .85rem; border-radius: 20px;
+        font-size: .75rem; font-weight: 600;
+        background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; white-space: nowrap;
     }
+    .sec-badge.blue { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
+    .sec-badge.green { background: #f0fdf4; color: #166534; border-color: #86efac; }
 
     .form-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(230px,1fr)); gap: 1rem; }
     .form-group { margin-bottom: 1rem; }
@@ -98,30 +96,12 @@
     .btn-danger { background: #dc2626; color: #fff; }
     .btn-danger:hover { background: #b91c1c; }
     .btn-sm { padding: .35rem .7rem; font-size: .78rem; }
-    .btn-outline { background: #fff; color: #374151; border: 1.5px solid #d1d5db; }
 
     .save-feedback { font-size: .8rem; margin-left: .5rem; }
+    .save-feedback.ok  { color: #059669; }
     .save-feedback.err { color: #dc2626; }
 
-    /* Product preview box */
-    .product-preview-box {
-        background: linear-gradient(135deg,#f8fafc,#f1f5f9);
-        border: 1px solid #e2e8f0; border-radius: 12px;
-        padding: 1rem 1.25rem; margin-bottom: 1.25rem;
-    }
-    .product-preview-box .preview-label { font-size: .7rem; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: #64748b; margin-bottom: .25rem; }
-    .product-preview-box .preview-title { font-size: 1.05rem; font-weight: 700; color: #0f172a; margin: 0 0 .5rem 0; }
-    .product-preview-box .preview-meta { display: flex; flex-wrap: wrap; gap: .75rem 1rem; font-size: .8125rem; color: #475569; }
-
-    /* Step 2: Images & Formats cards */
-    .step2-subsection { margin-bottom: 2rem; }
-    .step2-subtitle {
-        font-size: .9rem; font-weight: 700; color: #334155;
-        margin: 0 0 .35rem 0; display: flex; align-items: center; gap: .5rem;
-    }
-    .step2-hint { font-size: .8rem; color: #64748b; margin: 0 0 .75rem 0; }
-
-    /* Image cards */
+    /* Image grid */
     .image-grid { display: flex; flex-wrap: wrap; gap: .75rem; margin-bottom: .75rem; }
     .image-card {
         position: relative; width: 100px; height: 100px;
@@ -146,22 +126,18 @@
     .format-card {
         background: #f9fafb; border: 1.5px solid #e5e7eb;
         border-radius: 10px; padding: 1rem 1.25rem; margin-bottom: .75rem;
+        display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .5rem;
     }
-    .format-card-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: .75rem; }
-    .format-card-title { font-size: .875rem; font-weight: 700; color: #374151; }
+    .format-card-info { font-size: .875rem; }
+    .format-card-info strong { font-weight: 700; color: #111827; }
+    .format-card-info span { color: #6b7280; margin-left: .5rem; }
 
-    /* Add format form inline */
+    /* Add format inline */
     .add-format-form {
         background: #fff; border: 2px dashed #d1d5db; border-radius: 10px;
         padding: 1rem 1.25rem; margin-top: .75rem;
     }
     .add-format-form.hidden { display: none; }
-
-    /* Done box */
-    .create-done {
-        padding: 1rem; background: #f0fdf4;
-        border: 1px solid #86efac; border-radius: 8px; margin-top: 1rem;
-    }
 
     /* Toast */
     .toast-container { position: fixed; top: 1rem; right: 1rem; z-index: 10000; display: flex; flex-direction: column; gap: .5rem; max-width: 320px; pointer-events: none; }
@@ -177,7 +153,7 @@
     @keyframes spin { to { transform: rotate(360deg); } }
 
     @media (max-width: 640px) {
-        .create-section { padding: 1.25rem 1rem; }
+        .edit-section { padding: 1.25rem 1rem; }
         .form-grid { grid-template-columns: 1fr; }
     }
 </style>
@@ -185,109 +161,115 @@
 
 
 {% block content %}
-<div class="ks-create-wrapper" id="create-wrapper"
-     data-url-create-basic="{% url 'admin_panel:product_create_basic' %}"
-     data-url-image-upload="{% url 'admin_panel:product_image_upload' 999 %}"
-     data-url-images-list="{% url 'admin_panel:product_images_list' 999 %}"
+
+{# Pass all URL templates + current product id to JS via data attributes #}
+<div class="ks-edit-wrapper" id="edit-wrapper"
+     data-product-id="{{ product.pk }}"
+     data-url-update-basic="{% url 'admin_panel:product_update_basic' product.pk %}"
+     data-url-image-upload="{% url 'admin_panel:product_image_upload' product.pk %}"
+     data-url-images-list="{% url 'admin_panel:product_images_list' product.pk %}"
      data-url-image-delete="{% url 'admin_panel:product_image_delete' 999 %}"
-     data-url-format-add="{% url 'admin_panel:product_format_add' 999 %}"
-     data-url-formats-list="{% url 'admin_panel:product_formats_list' 999 %}"
-     data-url-product-edit="{% url 'admin_panel:product_edit' 999 %}">
+     data-url-format-add="{% url 'admin_panel:product_format_add' product.pk %}"
+     data-url-formats-list="{% url 'admin_panel:product_formats_list' product.pk %}"
+     data-url-product-list="{% url 'admin_panel:product_list' %}">
 
     {% csrf_token %}
-    <input type="hidden" id="created-product-id" value="">
 
-     <!-- ═══════════════════════════════════════════════
-       STEP 1 — BASIC BOOK INFORMATION
-    ═══════════════════════════════════════════════ -->
-    <div class="create-section" id="section-basic">
+    <div class="edit-section">
         <div class="sec-head">
             <div class="sec-icon"><i class="fas fa-book-open"></i></div>
             <div class="sec-title">
-                <h4><span class="section-num" style="margin-right:.5rem;">1</span> Book Information</h4>
-                <p>Fill in the details below, then click <strong>Save &amp; Continue</strong>.</p>
+                <h4>Book Information</h4>
+                <p>Edit details below and click <strong>Save Changes</strong>.</p>
             </div>
+            <span class="sec-badge green">Editing: {{ product.name|truncatechars:30 }}</span>
         </div>
 
         <div class="form-grid">
             <div class="form-group">
                 <label class="form-label">Category *</label>
+                {# Render the select from basic_form so it has the correct queryset #}
                 {{ basic_form.category }}
             </div>
             <div class="form-group">
                 <label class="form-label">Book Title *</label>
-                <input type="text" class="form-control" id="basic-name" placeholder="Book title">
+                <input type="text" class="form-control" id="edit-name" value="{{ product.name }}">
             </div>
         </div>
 
         <div class="form-grid">
             <div class="form-group">
                 <label class="form-label">Author *</label>
-                <input type="text" class="form-control" id="basic-author" placeholder="Author name">
+                <input type="text" class="form-control" id="edit-author" value="{{ product.author }}">
             </div>
             <div class="form-group">
                 <label class="form-label">Illustrator <span class="opt">(optional)</span></label>
-                <input type="text" class="form-control" id="basic-illustrator" placeholder="Illustrator name">
+                <input type="text" class="form-control" id="edit-illustrator" value="{{ product.illustrator }}">
             </div>
         </div>
 
         <div class="form-grid">
             <div class="form-group">
                 <label class="form-label">Publisher <span class="opt">(optional)</span></label>
-                <input type="text" class="form-control" id="basic-publisher" placeholder="Publisher">
+                <input type="text" class="form-control" id="edit-publisher" value="{{ product.publisher }}">
             </div>
             <div class="form-group">
                 <label class="form-label">Publication Year <span class="opt">(optional)</span></label>
-                <input type="number" class="form-control" id="basic-publication_year" placeholder="2024" min="1900" max="2030">
+                <input type="number" class="form-control" id="edit-publication_year"
+                       value="{{ product.publication_year|default:'' }}" min="1900" max="2030">
             </div>
         </div>
 
         <div class="form-grid">
             <div class="form-group">
                 <label class="form-label">ISBN-13 <span class="opt">(optional)</span></label>
-                <input type="text" class="form-control" id="basic-isbn" placeholder="ISBN">
+                <input type="text" class="form-control" id="edit-isbn" value="{{ product.isbn|default:'' }}">
             </div>
             <div class="form-group">
                 <label class="form-label">Language</label>
-                <input type="text" class="form-control" id="basic-language" value="English" placeholder="English">
+                <input type="text" class="form-control" id="edit-language" value="{{ product.language|default:'English' }}">
             </div>
         </div>
 
         <div class="form-grid">
             <div class="form-group">
                 <label class="form-label">Page Count <span class="opt">(optional)</span></label>
-                <input type="number" class="form-control" id="basic-page_count" placeholder="e.g. 32" min="1">
+                <input type="number" class="form-control" id="edit-page_count"
+                       value="{{ product.page_count|default:'' }}" min="1">
             </div>
             <div class="form-group">
                 <label class="form-label">Slug <span class="opt">(auto-generated)</span></label>
-                <input type="text" class="form-control" id="basic-slug" placeholder="auto-generated">
+                <input type="text" class="form-control" id="edit-slug" value="{{ product.slug }}">
             </div>
         </div>
 
         <div class="form-group">
             <label class="form-label">Description <span class="opt">(optional)</span></label>
-            <textarea class="form-control" id="basic-description" rows="3" placeholder="Book description"></textarea>
+            <textarea class="form-control" id="edit-description" rows="3">{{ product.description }}</textarea>
         </div>
 
         <div class="form-grid">
             <div class="form-group">
                 <label class="form-label">Sale Price (₹) *</label>
-                <input type="number" class="form-control" id="basic-price" step="0.01" min="0" placeholder="0.00">
+                <input type="number" class="form-control" id="edit-price"
+                       step="0.01" min="0" value="{{ product.price }}">
             </div>
             <div class="form-group">
                 <label class="form-label">Original MRP (₹) <span class="opt">(optional)</span></label>
-                <input type="number" class="form-control" id="basic-original_price" step="0.01" min="0" placeholder="">
+                <input type="number" class="form-control" id="edit-original_price"
+                       step="0.01" min="0" value="{{ product.original_price|default:'' }}">
             </div>
         </div>
 
-        {# Age Groups — rendered from form widget, chips style #}
+        {# Age group chips — pre-check the saved ones #}
         <div class="form-group">
             <label class="form-label">Age Groups <span class="opt">(leave empty = "All Ages")</span></label>
-            <div class="age-chip-list" id="age-chips">
+            <div class="age-chip-list">
                 {% for ag in age_groups %}
                 <div class="age-chip">
-                    <input type="checkbox" id="ag-{{ ag.id }}" value="{{ ag.id }}" class="age-group-cb">
-                    <label for="ag-{{ ag.id }}">{{ ag.emoji }} {{ ag.name }}</label>
+                    <input type="checkbox" id="ag-edit-{{ ag.id }}" value="{{ ag.id }}" class="age-group-cb"
+                           {% if ag in product_age_groups %}checked{% endif %}>
+                    <label for="ag-edit-{{ ag.id }}">{{ ag.emoji }} {{ ag.name }}</label>
                 </div>
                 {% endfor %}
             </div>
@@ -295,119 +277,110 @@
 
         <div class="checks-grid">
             <div class="check-row">
-                <input type="checkbox" id="basic-is_featured">
-                <label for="basic-is_featured">⭐ Featured <small>Show on homepage</small></label>
+                <input type="checkbox" id="edit-is_featured" {% if product.is_featured %}checked{% endif %}>
+                <label for="edit-is_featured">⭐ Featured <small>Show on homepage</small></label>
             </div>
             <div class="check-row">
-                <input type="checkbox" id="basic-is_bestseller">
-                <label for="basic-is_bestseller">🔥 Bestseller <small>Top seller badge</small></label>
+                <input type="checkbox" id="edit-is_bestseller" {% if product.is_bestseller %}checked{% endif %}>
+                <label for="edit-is_bestseller">🔥 Bestseller <small>Top seller badge</small></label>
             </div>
             <div class="check-row">
-                <input type="checkbox" id="basic-is_active" checked>
-                <label for="basic-is_active">✅ Active <small>Visible &amp; purchasable</small></label>
+                <input type="checkbox" id="edit-is_active" {% if product.is_active %}checked{% endif %}>
+                <label for="edit-is_active">✅ Active <small>Visible &amp; purchasable</small></label>
             </div>
         </div>
 
         <div style="margin-top:1.5rem; display:flex; align-items:center; gap:.75rem; flex-wrap:wrap;">
             <button type="button" id="btn-save-basic" class="btn btn-primary">
-                <i class="fas fa-check-circle"></i> Save &amp; Continue
+                <i class="fas fa-save"></i> Save Changes
             </button>
             <span id="basic-feedback" class="save-feedback"></span>
-            <a href="{% url 'admin_panel:product_list' %}" class="btn btn-secondary" style="margin-left:auto;">
-                <i class="fas fa-times"></i> Cancel
-            </a>
         </div>
     </div>
-    {# /step 1 #}
+    {# /section 1 #}
 
 
-    <!--  ═══════════════════════════════════════════════
-       STEP 2 — IMAGES & FORMATS (hidden until step 1 saved)
-    ═══════════════════════════════════════════════ -->
-    <div class="create-section hidden" id="section-step2">
+    <div class="edit-section">
         <div class="sec-head">
             <div class="sec-icon"><i class="fas fa-images"></i></div>
             <div class="sec-title">
-                <h4><span class="section-num" style="margin-right:.5rem;">2</span> Images &amp; Formats</h4>
-                <p>Add book cover images and stock formats (Hardcover, Paperback, etc.)</p>
+                <h4>Book Cover &amp; Images</h4>
+                <p>Upload up to 5 images. First uploaded becomes the primary cover.</p>
             </div>
+            <span class="sec-badge">Max 5 · 5 MB each</span>
         </div>
 
-        {# Product preview #}
-        <div class="product-preview-box" id="product-preview-box">
-            <div class="preview-label">Book saved</div>
-            <div class="preview-title" id="preview-name">—</div>
-            <div class="preview-meta">
-                <span id="preview-author">—</span>
-                <span id="preview-price">—</span>
-                <span id="preview-category">—</span>
-            </div>
+        <div class="image-grid" id="images-grid">
+            <p style="font-size:.85rem; color:#9ca3af;">Loading images…</p>
         </div>
-
-        {# ── Images ── #}
-        <div class="step2-subsection">
-            <p class="step2-subtitle"><i class="fas fa-images"></i> Book Cover &amp; Images</p>
-            <p class="step2-hint">Upload up to 5 images. First image uploaded becomes the primary cover.</p>
-            <div class="image-grid" id="images-grid"></div>
-            <button type="button" id="btn-add-image" class="btn btn-secondary btn-sm">
-                <i class="fas fa-plus"></i> Add image
-            </button>
-            <span id="image-count-hint" style="font-size:.8rem; color:#6b7280; margin-left:.5rem;"></span>
-        </div>
-
-        {# ── Formats ── #}
-        <div class="step2-subsection">
-            <p class="step2-subtitle"><i class="fas fa-book"></i> Book Formats &amp; Stock</p>
-            <p class="step2-hint">Add at least one format (Hardcover, Paperback, eBook, Audiobook) with stock and SKU.</p>
-            <div id="formats-list"></div>
-
-            {# Inline add-format form #}
-            <div class="add-format-form hidden" id="add-format-form">
-                <p style="font-weight:700; font-size:.875rem; margin:0 0 .75rem 0;">Add a format</p>
-                <div class="form-grid">
-                    <div class="form-group">
-                        <label class="form-label">Format *</label>
-                        <select class="form-control" id="fmt-type">
-                            <option value="">— select —</option>
-                            <option value="hardcover">Hardcover</option>
-                            <option value="paperback">Paperback</option>
-                            <option value="ebook">E-Book</option>
-                            <option value="audiobook">Audiobook</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">SKU *</label>
-                        <input type="text" class="form-control" id="fmt-sku" placeholder="e.g. ISBN-HB">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Stock *</label>
-                        <input type="number" class="form-control" id="fmt-stock" min="0" value="0">
-                    </div>
-                </div>
-                <div style="display:flex; gap:.5rem; flex-wrap:wrap;">
-                    <button type="button" id="btn-fmt-save" class="btn btn-primary btn-sm">Save format</button>
-                    <button type="button" id="btn-fmt-cancel" class="btn btn-secondary btn-sm">Cancel</button>
-                    <span id="fmt-feedback" class="save-feedback"></span>
-                </div>
-            </div>
-
-            <button type="button" id="btn-show-add-format" class="btn btn-secondary btn-sm" style="margin-top:.5rem;">
-                <i class="fas fa-plus"></i> Add format
-            </button>
-        </div>
-
-        {# Done box #}
-        <div class="create-done hidden" id="create-done-box">
-            <p style="margin:0 0 .5rem 0;"><strong>All set!</strong> You can edit this book anytime.</p>
-            <a href="#" id="link-edit-product" class="btn btn-primary btn-sm">
-                <i class="fas fa-edit"></i> Edit product
-            </a>
-            <a href="{% url 'admin_panel:product_list' %}" class="btn btn-secondary btn-sm" style="margin-left:.5rem;">
-                <i class="fas fa-list"></i> Back to products
-            </a>
-        </div>
+        <button type="button" id="btn-add-image" class="btn btn-secondary btn-sm">
+            <i class="fas fa-plus"></i> Add image
+        </button>
+        <span id="image-count-hint" style="font-size:.8rem; color:#6b7280; margin-left:.5rem;"></span>
     </div>
-    {# /step 2 #}
+    {# /section 2 #}
+
+
+    <!-- ═══════════════════════════════════════════════
+       SECTION 3 — FORMATS
+    ═══════════════════════════════════════════════ -->
+    <div class="edit-section">
+        <div class="sec-head">
+            <div class="sec-icon"><i class="fas fa-book"></i></div>
+            <div class="sec-title">
+                <h4>Book Formats &amp; Stock</h4>
+                <p>Hardcover, Paperback, eBook, Audiobook — each with SKU &amp; stock.</p>
+            </div>
+            <span class="sec-badge blue">At least 1 required · max 4</span>
+        </div>
+
+        <div id="formats-list">
+            <p style="font-size:.85rem; color:#9ca3af;">Loading formats…</p>
+        </div>
+
+        {# Inline add-format form #}
+        <div class="add-format-form hidden" id="add-format-form">
+            <p style="font-weight:700; font-size:.875rem; margin:0 0 .75rem 0;">Add a format</p>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label class="form-label">Format *</label>
+                    <select class="form-control" id="fmt-type">
+                        <option value="">— select —</option>
+                        <option value="hardcover">Hardcover</option>
+                        <option value="paperback">Paperback</option>
+                        <option value="ebook">E-Book</option>
+                        <option value="audiobook">Audiobook</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">SKU *</label>
+                    <input type="text" class="form-control" id="fmt-sku" placeholder="e.g. ISBN-HB">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Stock *</label>
+                    <input type="number" class="form-control" id="fmt-stock" min="0" value="0">
+                </div>
+            </div>
+            <div style="display:flex; gap:.5rem; flex-wrap:wrap;">
+                <button type="button" id="btn-fmt-save" class="btn btn-primary btn-sm">Save format</button>
+                <button type="button" id="btn-fmt-cancel" class="btn btn-secondary btn-sm">Cancel</button>
+                <span id="fmt-feedback" class="save-feedback"></span>
+            </div>
+        </div>
+
+        <button type="button" id="btn-show-add-format" class="btn btn-secondary btn-sm" style="margin-top:.75rem;">
+            <i class="fas fa-plus"></i> Add format
+        </button>
+    </div>
+    {# /section 3 #}
+
+
+    {# Back to list #}
+    <div style="margin-top:.5rem;">
+        <a href="{% url 'admin_panel:product_list' %}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Back to products
+        </a>
+    </div>
 
 </div>
 
@@ -429,22 +402,19 @@
 (function () {
 'use strict';
 
-/* ── URL templates from data attributes ── */
-var wrapper      = document.getElementById('create-wrapper');
-var URL_CREATE   = wrapper.dataset.urlCreateBasic;
-var URL_IMG_TPL  = wrapper.dataset.urlImageUpload;   /* contains 999 */
-var URL_IMGS_TPL = wrapper.dataset.urlImagesList;
-var URL_IMGDEL_TPL = wrapper.dataset.urlImageDelete;
-var URL_FMT_TPL  = wrapper.dataset.urlFormatAdd;
-var URL_FMTS_TPL = wrapper.dataset.urlFormatsList;
-var URL_EDIT_TPL = wrapper.dataset.urlProductEdit;
+var wrapper     = document.getElementById('edit-wrapper');
+var PRODUCT_ID  = wrapper.dataset.productId;
+var URL_UPDATE  = wrapper.dataset.urlUpdateBasic;
+var URL_IMG_UPL = wrapper.dataset.urlImageUpload;
+var URL_IMGS    = wrapper.dataset.urlImagesList;
+var URL_IMGDEL_TPL = wrapper.dataset.urlImageDelete;   /* contains 999 */
+var URL_FMT_ADD = wrapper.dataset.urlFormatAdd;
+var URL_FMTS    = wrapper.dataset.urlFormatsList;
+var csrf        = (document.querySelector('[name=csrfmiddlewaretoken]') || {}).value || '';
 
-var csrf = (document.querySelector('[name=csrfmiddlewaretoken]') || {}).value || '';
-
-/* Replace 999 placeholder with real id */
 function pid(tpl, id) { return tpl.replace('999', String(id)); }
 
-/* ── Helpers ── */
+/* ── Toast ── */
 function toast(msg, type) {
     var c = document.getElementById('toast-container');
     var el = document.createElement('div');
@@ -453,25 +423,24 @@ function toast(msg, type) {
     el.textContent = msg;
     c.appendChild(el);
     setTimeout(function () {
-        el.style.opacity = '0';
-        el.style.transition = 'opacity .2s';
+        el.style.opacity = '0'; el.style.transition = 'opacity .2s';
         setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 200);
     }, 3500);
 }
 
+/* ── Loader ── */
 var loaderN = 0;
 function showLoader() { loaderN++; document.getElementById('loader-overlay').classList.add('is-active'); }
 function hideLoader() { if (--loaderN <= 0) { loaderN = 0; document.getElementById('loader-overlay').classList.remove('is-active'); } }
 
+/* ── Slug auto-gen ── */
 function slugify(t) {
     return (t || '').toLowerCase().trim()
-        .replace(/[^\w\s-]/g, '').replace(/[\s_-]+/g, '-').replace(/^-+|-+$/g, '');
+        .replace(/[^\w\s-]/g,'').replace(/[\s_-]+/g,'-').replace(/^-+|-+$/g,'');
 }
-
-/* ── Slug auto-gen ── */
-var nameInp = document.getElementById('basic-name');
-var slugInp = document.getElementById('basic-slug');
-var manualSlug = false;
+var nameInp = document.getElementById('edit-name');
+var slugInp = document.getElementById('edit-slug');
+var manualSlug = !!(slugInp && slugInp.value);
 if (nameInp && slugInp) {
     nameInp.addEventListener('input', function () {
         if (!manualSlug) slugInp.value = slugify(this.value);
@@ -481,51 +450,39 @@ if (nameInp && slugInp) {
     });
 }
 
-/* ── State ── */
-var productId = null;
-
-function setProductId(id) {
-    productId = id;
-    document.getElementById('created-product-id').value = String(id);
-    var editLink = document.getElementById('link-edit-product');
-    if (editLink) editLink.href = pid(URL_EDIT_TPL, id);
-}
-
-/* ═══════════════════════════════════════
-   STEP 1 — Save basic info
-═══════════════════════════════════════ */
+/* ═══════════════════════════════════════════
+   SECTION 1 — Save basic info (update)
+═══════════════════════════════════════════ */
 document.getElementById('btn-save-basic').addEventListener('click', function () {
     var btn      = this;
     var feedback = document.getElementById('basic-feedback');
     var catSel   = wrapper.querySelector('select[name="category"]');
 
-    /* Collect age group ids */
     var ageGroups = [];
     wrapper.querySelectorAll('.age-group-cb:checked').forEach(function (cb) {
         ageGroups.push(parseInt(cb.value, 10));
     });
 
     var payload = {
-        name:             (document.getElementById('basic-name').value || '').trim(),
-        slug:             (document.getElementById('basic-slug').value || '').trim() || null,
-        description:      (document.getElementById('basic-description').value || '').trim(),
-        author:           (document.getElementById('basic-author').value || '').trim(),
-        illustrator:      (document.getElementById('basic-illustrator').value || '').trim(),
-        publisher:        (document.getElementById('basic-publisher').value || '').trim(),
-        publication_year: document.getElementById('basic-publication_year').value || null,
-        isbn:             (document.getElementById('basic-isbn').value || '').trim() || null,
-        page_count:       document.getElementById('basic-page_count').value || null,
-        language:         (document.getElementById('basic-language').value || 'English').trim(),
-        price:            document.getElementById('basic-price').value,
-        original_price:   document.getElementById('basic-original_price').value || null,
+        name:             (document.getElementById('edit-name').value || '').trim(),
+        slug:             (document.getElementById('edit-slug').value || '').trim() || null,
+        description:      (document.getElementById('edit-description').value || '').trim(),
+        author:           (document.getElementById('edit-author').value || '').trim(),
+        illustrator:      (document.getElementById('edit-illustrator').value || '').trim(),
+        publisher:        (document.getElementById('edit-publisher').value || '').trim(),
+        publication_year: document.getElementById('edit-publication_year').value || null,
+        isbn:             (document.getElementById('edit-isbn').value || '').trim() || null,
+        page_count:       document.getElementById('edit-page_count').value || null,
+        language:         (document.getElementById('edit-language').value || 'English').trim(),
+        price:            document.getElementById('edit-price').value,
+        original_price:   document.getElementById('edit-original_price').value || null,
         age_groups:       ageGroups,
-        is_featured:      document.getElementById('basic-is_featured').checked,
-        is_bestseller:    document.getElementById('basic-is_bestseller').checked,
-        is_active:        document.getElementById('basic-is_active').checked,
+        is_featured:      document.getElementById('edit-is_featured').checked,
+        is_bestseller:    document.getElementById('edit-is_bestseller').checked,
+        is_active:        document.getElementById('edit-is_active').checked,
         category:         catSel ? catSel.value : null
     };
 
-    /* Client-side validation */
     if (!payload.name)     { toast('Book title is required.', 'error'); return; }
     if (!payload.author)   { toast('Author is required.', 'error'); return; }
     if (!payload.price)    { toast('Price is required.', 'error'); return; }
@@ -536,7 +493,7 @@ document.getElementById('btn-save-basic').addEventListener('click', function () 
     feedback.className = 'save-feedback';
     showLoader();
 
-    fetch(URL_CREATE, {
+    fetch(URL_UPDATE, {
         method: 'POST',
         headers: { 'X-CSRFToken': csrf, 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -545,27 +502,12 @@ document.getElementById('btn-save-basic').addEventListener('click', function () 
     .then(function (r) { return r.json(); })
     .then(function (data) {
         btn.disabled = false;
-        if (data.success && data.product_id) {
-            setProductId(data.product_id);
-            feedback.textContent = '';
-
-            /* Show preview */
-            document.getElementById('preview-name').textContent    = payload.name;
-            document.getElementById('preview-author').innerHTML    = '<i class="fas fa-user"></i> ' + payload.author;
-            document.getElementById('preview-price').innerHTML     = '<i class="fas fa-tag"></i> ₹' + Number(payload.price).toFixed(2);
-            var catText = catSel && catSel.options[catSel.selectedIndex] ? catSel.options[catSel.selectedIndex].text.trim() : '';
-            document.getElementById('preview-category').innerHTML  = '<i class="fas fa-folder"></i> ' + catText;
-
-            /* Switch to step 2 */
-            document.getElementById('section-basic').classList.add('hidden');
-            document.getElementById('section-step2').classList.remove('hidden');
-            document.getElementById('section-step2').scrollIntoView({ behavior: 'smooth' });
-
-            toast('Book saved! Now add images and formats.');
-            loadImages();
-            loadFormats();
+        if (data.success) {
+            feedback.textContent = '✓ Saved';
+            feedback.className = 'save-feedback ok';
+            toast('Book info saved successfully.');
         } else {
-            var errMsg = 'Error saving book.';
+            var errMsg = 'Error saving.';
             if (data.errors) {
                 if (data.errors.__all__ && data.errors.__all__[0]) {
                     errMsg = data.errors.__all__[0];
@@ -590,12 +532,11 @@ document.getElementById('btn-save-basic').addEventListener('click', function () 
 });
 
 
-/* ═══════════════════════════════════════
-   STEP 2 — Images
-═══════════════════════════════════════ */
+/* ═══════════════════════════════════════════
+   SECTION 2 — Images
+═══════════════════════════════════════════ */
 function loadImages() {
-    if (!productId) return;
-    fetch(pid(URL_IMGS_TPL, productId), { credentials: 'same-origin', headers: { 'X-CSRFToken': csrf } })
+    fetch(URL_IMGS, { credentials: 'same-origin', headers: { 'X-CSRFToken': csrf } })
         .then(function (r) { return r.json(); })
         .then(function (data) { renderImages(data.images || []); })
         .catch(function () { toast('Could not load images.', 'error'); });
@@ -605,61 +546,57 @@ function renderImages(images) {
     var grid = document.getElementById('images-grid');
     var hint = document.getElementById('image-count-hint');
     grid.innerHTML = '';
-    images.forEach(function (img) {
-        var card = document.createElement('div');
-        card.className = 'image-card';
-        card.innerHTML =
-            (img.url ? '<img src="' + img.url + '" alt="">' : '<i class="fas fa-image" style="color:#ccc;font-size:1.5rem;"></i>') +
-            (img.is_primary ? '<span class="img-badge">Cover</span>' : '') +
-            '<button type="button" class="img-del" data-id="' + img.id + '" title="Remove">✕</button>';
-        grid.appendChild(card);
-    });
-    /* Delete handlers */
-    grid.querySelectorAll('.img-del').forEach(function (btn) {
-        btn.addEventListener('click', function () {
-            var imageId = this.dataset.id;
-            if (!confirm('Remove this image?')) return;
-            showLoader();
-            fetch(pid(URL_IMGDEL_TPL, imageId), {
-                method: 'POST',
-                headers: { 'X-CSRFToken': csrf },
-                credentials: 'same-origin'
-            })
-            .then(function (r) { return r.json(); })
-            .then(function (res) {
-                if (res.success) { toast('Image removed.'); loadImages(); }
-                else toast(res.message || 'Could not remove.', 'error');
-            })
-            .catch(function () { toast('Network error.', 'error'); })
-            .finally(function () { hideLoader(); });
+
+    if (!images.length) {
+        grid.innerHTML = '<p style="font-size:.85rem;color:#9ca3af;margin:0 0 .5rem;">No images yet.</p>';
+    } else {
+        images.forEach(function (img) {
+            var card = document.createElement('div');
+            card.className = 'image-card';
+            card.innerHTML =
+                (img.url ? '<img src="' + img.url + '" alt="">' : '<i class="fas fa-image" style="color:#ccc;font-size:1.5rem;"></i>') +
+                (img.is_primary ? '<span class="img-badge">Cover</span>' : '') +
+                '<button type="button" class="img-del" data-id="' + img.id + '" title="Remove">✕</button>';
+            grid.appendChild(card);
         });
-    });
+        grid.querySelectorAll('.img-del').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var imageId = this.dataset.id;
+                if (!confirm('Remove this image?')) return;
+                showLoader();
+                fetch(pid(URL_IMGDEL_TPL, imageId), {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': csrf },
+                    credentials: 'same-origin'
+                })
+                .then(function (r) { return r.json(); })
+                .then(function (res) {
+                    if (res.success) { toast('Image removed.'); loadImages(); }
+                    else toast(res.message || 'Could not remove.', 'error');
+                })
+                .catch(function () { toast('Network error.', 'error'); })
+                .finally(function () { hideLoader(); });
+            });
+        });
+    }
 
     var remaining = 5 - images.length;
     hint.textContent = images.length + '/5 images' + (remaining > 0 ? ' (' + remaining + ' more allowed)' : ' — maximum reached');
     document.getElementById('btn-add-image').style.display = remaining > 0 ? '' : 'none';
-
-    /* Show done box once there is at least one image */
-    if (images.length > 0) {
-        document.getElementById('create-done-box').classList.remove('hidden');
-    }
 }
 
 document.getElementById('btn-add-image').addEventListener('click', function () {
-    if (!productId) return;
     var input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*';
+    input.type = 'file'; input.accept = 'image/*';
     input.onchange = function () {
         if (!this.files || !this.files.length) return;
         var file = this.files[0];
-        /* Client-side size guard */
         if (file.size > 5 * 1024 * 1024) { toast('Image exceeds 5 MB limit.', 'error'); return; }
         var fd = new FormData();
         fd.append('image', file);
         fd.append('csrfmiddlewaretoken', csrf);
         showLoader();
-        fetch(pid(URL_IMG_TPL, productId), {
+        fetch(URL_IMG_UPL, {
             method: 'POST',
             headers: { 'X-CSRFToken': csrf },
             body: fd,
@@ -677,46 +614,43 @@ document.getElementById('btn-add-image').addEventListener('click', function () {
 });
 
 
-/* ═══════════════════════════════════════
-   STEP 2 — Formats
-═══════════════════════════════════════ */
+/* ═══════════════════════════════════════════
+   SECTION 3 — Formats
+═══════════════════════════════════════════ */
+var FORMAT_LABELS = { hardcover: 'Hardcover', paperback: 'Paperback', ebook: 'E-Book', audiobook: 'Audiobook' };
+
 function loadFormats() {
-    if (!productId) return;
-    fetch(pid(URL_FMTS_TPL, productId), { credentials: 'same-origin', headers: { 'X-CSRFToken': csrf } })
+    fetch(URL_FMTS, { credentials: 'same-origin', headers: { 'X-CSRFToken': csrf } })
         .then(function (r) { return r.json(); })
         .then(function (data) { renderFormats(data.formats || []); })
         .catch(function () { toast('Could not load formats.', 'error'); });
 }
 
-var FORMAT_LABELS = { hardcover: 'Hardcover', paperback: 'Paperback', ebook: 'E-Book', audiobook: 'Audiobook' };
-
 function renderFormats(formats) {
     var list = document.getElementById('formats-list');
     list.innerHTML = '';
     if (!formats.length) {
-        list.innerHTML = '<p style="font-size:.8rem; color:#9ca3af; margin:.25rem 0 .75rem;">No formats yet. Add one below.</p>';
+        list.innerHTML = '<p style="font-size:.85rem;color:#9ca3af;margin:0 0 .5rem;">No formats yet.</p>';
         return;
     }
     formats.forEach(function (f) {
         var card = document.createElement('div');
         card.className = 'format-card';
         card.innerHTML =
-            '<div class="format-card-head">' +
-            '<span class="format-card-title"><i class="fas fa-book"></i> ' + (FORMAT_LABELS[f.format_type] || f.format_type) + '</span>' +
-            '<span style="font-size:.8125rem; color:#6b7280;">SKU: ' + f.sku + ' &nbsp;·&nbsp; Stock: ' + f.stock_quantity + (f.is_active ? '' : ' &nbsp;<span style="color:#dc2626;">(inactive)</span>') + '</span>' +
+            '<div class="format-card-info">' +
+            '<strong>' + (FORMAT_LABELS[f.format_type] || f.format_type) + '</strong>' +
+            '<span>SKU: ' + f.sku + '</span>' +
+            '<span>Stock: ' + f.stock_quantity + '</span>' +
+            (!f.is_active ? '<span style="color:#dc2626;">(inactive)</span>' : '') +
             '</div>';
         list.appendChild(card);
     });
 }
 
-/* Show / hide add-format inline form */
 document.getElementById('btn-show-add-format').addEventListener('click', function () {
-    var form = document.getElementById('add-format-form');
-    form.classList.toggle('hidden');
-    if (!form.classList.contains('hidden')) {
-        document.getElementById('fmt-type').focus();
-        this.style.display = 'none';
-    }
+    document.getElementById('add-format-form').classList.remove('hidden');
+    this.style.display = 'none';
+    document.getElementById('fmt-type').focus();
 });
 document.getElementById('btn-fmt-cancel').addEventListener('click', function () {
     document.getElementById('add-format-form').classList.add('hidden');
@@ -725,10 +659,9 @@ document.getElementById('btn-fmt-cancel').addEventListener('click', function () 
 });
 
 document.getElementById('btn-fmt-save').addEventListener('click', function () {
-    if (!productId) return;
-    var type    = document.getElementById('fmt-type').value;
-    var sku     = (document.getElementById('fmt-sku').value || '').trim();
-    var stock   = parseInt(document.getElementById('fmt-stock').value, 10) || 0;
+    var type     = document.getElementById('fmt-type').value;
+    var sku      = (document.getElementById('fmt-sku').value || '').trim();
+    var stock    = parseInt(document.getElementById('fmt-stock').value, 10) || 0;
     var feedback = document.getElementById('fmt-feedback');
 
     if (!type) { toast('Please select a format type.', 'error'); return; }
@@ -737,10 +670,9 @@ document.getElementById('btn-fmt-save').addEventListener('click', function () {
     var btn = this;
     btn.disabled = true;
     feedback.textContent = 'Saving…';
-    feedback.className = 'save-feedback';
     showLoader();
 
-    fetch(pid(URL_FMT_TPL, productId), {
+    fetch(URL_FMT_ADD, {
         method: 'POST',
         headers: { 'X-CSRFToken': csrf, 'Content-Type': 'application/json' },
         body: JSON.stringify({ format_type: type, sku: sku, stock_quantity: stock, is_active: true }),
@@ -751,17 +683,15 @@ document.getElementById('btn-fmt-save').addEventListener('click', function () {
         btn.disabled = false;
         if (res.success) {
             toast('Format added.');
-            feedback.textContent = '';
-            /* Reset form */
             document.getElementById('fmt-type').value  = '';
             document.getElementById('fmt-sku').value   = '';
             document.getElementById('fmt-stock').value = '0';
             document.getElementById('add-format-form').classList.add('hidden');
             document.getElementById('btn-show-add-format').style.display = '';
+            feedback.textContent = '';
             loadFormats();
-            document.getElementById('create-done-box').classList.remove('hidden');
         } else {
-            var errMsg = 'Error saving format.';
+            var errMsg = 'Error.';
             if (res.errors) {
                 for (var k in res.errors) {
                     if (res.errors[k] && res.errors[k][0]) { errMsg = k + ': ' + res.errors[k][0]; break; }
@@ -775,11 +705,14 @@ document.getElementById('btn-fmt-save').addEventListener('click', function () {
     .catch(function () {
         btn.disabled = false;
         feedback.textContent = 'Network error.';
-        feedback.className = 'save-feedback err';
         toast('Network error.', 'error');
     })
     .finally(function () { hideLoader(); });
 });
+
+/* ── Load on page open ── */
+loadImages();
+loadFormats();
 
 })();
 </script>

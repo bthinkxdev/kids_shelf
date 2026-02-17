@@ -27,16 +27,23 @@ from .models import (
     Product,
     ProductImage,
     BookFormat,
-    AgeGroup
+    AgeGroup,
+    Review
 )
 from .admin_forms import (
     AdminLoginForm,
     CategoryForm,
     ProductForm,
+    ProductBasicForm,
     ProductImageFormSet,
     BookFormatFormSet, 
+    _validate_image_file,
 )
-
+from django import forms
+import json
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from django.db import transaction
+from django.utils.dateparse import parse_date
 
 class StaffRequiredMixin(UserPassesTestMixin):
     """Mixin to require staff/admin access"""
@@ -288,37 +295,73 @@ class ProductListView(StaffRequiredMixin, ListView):
         context["filter_category"] = self.request.GET.get("category", "")
         context["filter_status"] = self.request.GET.get("status", "")
         context["filter_age_group"] = self.request.GET.get("age_group", "")
+        
+        # ✅ ROBUSTNESS: Add stock info to each product
+        for product in context["products"]:
+            try:
+                product.total_stock = product.get_total_stock()
+                product.has_stock = product.has_available_stock()
+                product.available_formats_count = product.get_available_formats().count()
+            except Exception:
+                product.total_stock = 0
+                product.has_stock = False
+                product.available_formats_count = 0
+        
         return context
 
 
-class ProductCreateView(StaffRequiredMixin, CreateView):
-    model = Product
-    form_class = ProductForm
-    template_name = "admin/product_form.html"
-    success_url = reverse_lazy("admin_panel:product_list")
+class ProductCreateView(StaffRequiredMixin, TemplateView):
     
+    template_name = "admin/product_form.html"
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        if self.request.POST:
-            context["image_formset"] = ProductImageFormSet(self.request.POST, self.request.FILES)
-            context["format_formset"] = BookFormatFormSet(self.request.POST)
-        else:
-            context["image_formset"] = ProductImageFormSet()
-            context["format_formset"] = BookFormatFormSet()
+        context["basic_form"] = ProductBasicForm(instance=None)
+        context["age_groups"] = AgeGroup.objects.filter(is_active=True).order_by("display_order")
         context["active_menu"] = "products"
-        context["form_title"] = "Create Product"
+        context["form_title"] = "Add Book"
         return context
+    
+class ProductUpdateView(StaffRequiredMixin, View):
+    
+    template_name = "admin/product_edit_form.html"
+
+    def get(self, request, pk):
+        product = get_object_or_404(Product, pk=pk)
+        basic_form = ProductBasicForm(instance=product)
+        age_groups = AgeGroup.objects.filter(is_active=True).order_by("display_order")
+        # Pre-selected age groups for this product
+        product_age_groups = product.age_groups.filter(is_active=True)
+        return render(request, self.template_name, {
+            "product": product,
+            "basic_form": basic_form,
+            "age_groups": age_groups,
+            "product_age_groups": product_age_groups,
+            "active_menu": "products",
+            "form_title": f"Edit Book — {product.name}",
+        })
     
     def form_valid(self, form):
         context = self.get_context_data()
         image_formset = context["image_formset"]
         format_formset = context["format_formset"]
         
-        if not (image_formset.is_valid() and format_formset.is_valid()):
+        if not image_formset.is_valid():
             for error in image_formset.non_form_errors():
-                messages.error(self.request, error)
+                messages.error(self.request, f"Image error: {error}")
+            for form_item in image_formset.forms:
+                for field, errors in form_item.errors.items():
+                    for error in errors:
+                        messages.error(self.request, f"Image {field}: {error}")
+            return self.form_invalid(form)
+        
+        if not format_formset.is_valid():
             for error in format_formset.non_form_errors():
-                messages.error(self.request, error)
+                messages.error(self.request, f"Format error: {error}")
+            for form_item in format_formset.forms:
+                for field, errors in form_item.errors.items():
+                    for error in errors:
+                        messages.error(self.request, f"Format {field}: {error}")
             return self.form_invalid(form)
         
         from django.db import transaction
@@ -329,91 +372,121 @@ class ProductCreateView(StaffRequiredMixin, CreateView):
                 image_formset.save()
                 format_formset.instance = self.object
                 format_formset.save()
-                messages.success(self.request, f"✅ Book '{self.object.name}' created!")
+                
+                messages.success(
+                    self.request, 
+                    f"✅ Book '{self.object.name}' updated successfully!"
+                )
                 return redirect(self.success_url)
+                
         except Exception as e:
-            messages.error(self.request, f"❌ Error: {str(e)}")
+            messages.error(self.request, f"❌ Error updating book: {str(e)}")
             return self.form_invalid(form)
 
+class ProductUpdateBasicView(StaffRequiredMixin, View):
 
-class ProductUpdateView(StaffRequiredMixin, UpdateView):
-    model = Product
-    form_class = ProductForm
-    template_name = "admin/product_form.html"
-    success_url = reverse_lazy("admin_panel:product_list")
-    
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        if self.request.POST:
-            context["image_formset"] = ProductImageFormSet(
-                self.request.POST, self.request.FILES, instance=self.object
-            )
-            context["format_formset"] = BookFormatFormSet(
-                self.request.POST, instance=self.object
-            )
-        else:
-            context["image_formset"] = ProductImageFormSet(instance=self.object)
-            context["format_formset"] = BookFormatFormSet(instance=self.object)
-        context["active_menu"] = "products"
-        context["form_title"] = "Edit Product"
-        return context
-    
-    def form_valid(self, form):
-        context = self.get_context_data()
-        image_formset = context["image_formset"]
-        format_formset = context["format_formset"]
-        
-        if not (image_formset.is_valid() and format_formset.is_valid()):
-            for error in image_formset.non_form_errors():
-                messages.error(self.request, error)
-            for error in format_formset.non_form_errors():
-                messages.error(self.request, error)
-            return self.form_invalid(form)
-        
-        from django.db import transaction
+    def post(self, request, pk):
+        product = get_object_or_404(Product, pk=pk)
+
         try:
-            with transaction.atomic():
-                self.object = form.save()
-                image_formset.instance = self.object
-                image_formset.save()
-                format_formset.instance = self.object
-                format_formset.save()
-                messages.success(self.request, f"✅ Book '{self.object.name}' updated!")
-                return redirect(self.success_url)
-        except Exception as e:
-            messages.error(self.request, f"❌ Error: {str(e)}")
-            return self.form_invalid(form)
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({
+                'success': False,
+                'errors': {'__all__': ['Invalid JSON data']}
+            }, status=400)
 
+        # Extract age_groups before passing to form
+        age_group_ids = data.pop('age_groups', []) or []
 
+        form = ProductBasicForm(data, instance=product)
+
+        if form.is_valid():
+            from django.db import transaction
+            try:
+                with transaction.atomic():
+                    product = form.save()
+
+                    # Handle age_groups M2M
+                    if age_group_ids:
+                        valid_age_groups = AgeGroup.objects.filter(
+                            id__in=age_group_ids,
+                            is_active=True
+                        )
+                        product.age_groups.set(valid_age_groups)
+                    else:
+                        product.age_groups.clear()
+
+                    return JsonResponse({
+                        'success': True,
+                        'product': {
+                            'name': product.name,
+                            'price': str(product.price),
+                            'author': product.author,
+                        }
+                    })
+            except Exception as e:
+                return JsonResponse({
+                    'success': False,
+                    'errors': {'__all__': [str(e)]}
+                }, status=500)
+
+        errors = {}
+        for field, error_list in form.errors.items():
+            errors[field] = [str(e) for e in error_list]
+
+        return JsonResponse({'success': False, 'errors': errors}, status=400)
 class ProductDeleteView(StaffRequiredMixin, DeleteView):
     model = Product
     success_url = reverse_lazy("admin_panel:product_list")
     
     def post(self, request, *args, **kwargs):
         product = self.get_object()
+        product_name = product.name
         
         # Check if product has orders
-        if product.order_items.exists():
-            messages.error(
-                request, 
-                f"Cannot delete '{product.name}' because it has been ordered. "
-                "Deactivate it instead by editing and unchecking 'Active'."
-            )
-            return redirect("admin_panel:product_list")
+        try:
+            if product.order_items.exists():
+                messages.error(
+                    request, 
+                    f"Cannot delete '{product_name}' because it has been ordered. "
+                    "Deactivate it instead by editing and unchecking 'Active'."
+                )
+                return redirect("admin_panel:product_list")
+        except Exception:
+            pass  # Continue with other checks
         
         # Check if product formats are in any carts
-        if product.cart_items.exists():
-            messages.error(
-                request,
-                f"Cannot delete '{product.name}' because it's currently in {product.cart_items.count()} cart(s). "
-                "Wait for customers to checkout or clear their carts, or deactivate the product instead."
-            )
-            return redirect("admin_panel:product_list")
+        try:
+            cart_count = product.cart_items.count()
+            if cart_count > 0:
+                messages.error(
+                    request,
+                    f"Cannot delete '{product_name}' because it's in {cart_count} cart(s). "
+                    "Deactivate the product or wait for carts to clear."
+                )
+                return redirect("admin_panel:product_list")
+        except Exception:
+            pass  # Continue with deletion
         
-        # Safe to delete - no orders, no carts
-        product.formats.all().delete()  # Delete formats first
-        messages.success(request, f"Product '{product.name}' deleted successfully!")
-        return super().post(request, *args, **kwargs)
+        from django.db import transaction
+        try:
+            with transaction.atomic():
+                # Delete formats first
+                product.formats.all().delete()
+                
+                # Delete images
+                product.images.all().delete()
+                
+                # Delete product
+                product.delete()
+                
+                messages.success(request, f"Product '{product_name}' deleted successfully!")
+                return redirect("admin_panel:product_list")
+                
+        except Exception as e:
+            messages.error(request, f"Error deleting product: {str(e)}")
+            return redirect("admin_panel:product_list")
 
 
 # Order Management Views
@@ -589,3 +662,396 @@ class AgeGroupDeleteView(StaffRequiredMixin, DeleteView):
         age_group = self.get_object()
         messages.success(request, f"Age group '{age_group.name}' deleted successfully!")
         return super().post(request, *args, **kwargs)
+    
+# AJAX API VIEWS FOR PRODUCT CREATION
+class ProductCreateBasicView(StaffRequiredMixin, View):
+    def post(self, request):
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({
+                'success': False,
+                'errors': {'__all__': ['Invalid JSON data']}
+            }, status=400)
+
+        # Extract age_groups before passing to form (M2M can't go through ModelForm via JSON)
+        age_group_ids = data.pop('age_groups', []) or []
+
+        form = ProductBasicForm(data)
+
+        if form.is_valid():
+            from django.db import transaction
+            try:
+                with transaction.atomic():
+                    product = form.save()
+
+                    # Handle age_groups M2M separately
+                    if age_group_ids:
+                        valid_age_groups = AgeGroup.objects.filter(
+                            id__in=age_group_ids,
+                            is_active=True
+                        )
+                        product.age_groups.set(valid_age_groups)
+                    else:
+                        product.age_groups.clear()
+
+                    return JsonResponse({
+                        'success': True,
+                        'product_id': product.id,
+                        'product': {
+                            'name': product.name,
+                            'price': str(product.price),
+                            'author': product.author,
+                            'category_name': product.category.name if product.category else ''
+                        }
+                    })
+            except Exception as e:
+                return JsonResponse({
+                    'success': False,
+                    'errors': {'__all__': [str(e)]}
+                }, status=500)
+
+        # Return form errors
+        errors = {}
+        for field, error_list in form.errors.items():
+            errors[field] = [str(e) for e in error_list]
+
+        return JsonResponse({'success': False, 'errors': errors}, status=400)
+
+
+class ProductFormatsListApiView(StaffRequiredMixin, View):
+    """✅ ROBUSTNESS: Get all formats for a product"""
+    def get(self, request, pk):
+        try:
+            product = get_object_or_404(Product, pk=pk)
+            formats = []
+            
+            for fmt in product.formats.all().order_by('format_type'):
+                formats.append({
+                    'id': fmt.id,
+                    'sku': fmt.sku,
+                    'format_type': fmt.format_type,
+                    'format_type_display': fmt.get_format_type_display(),
+                    'stock_quantity': fmt.stock_quantity,
+                    'is_active': fmt.is_active,
+                    'is_available': fmt.is_available()
+                })
+            
+            return JsonResponse({'formats': formats})
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'error': str(e)
+            }, status=500)
+
+
+class ProductFormatAddApiView(StaffRequiredMixin, View):
+    """✅ ROBUSTNESS: Add a single format to existing product"""
+    def post(self, request, pk):
+        try:
+            product = get_object_or_404(Product, pk=pk)
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({
+                'success': False,
+                'errors': {'__all__': ['Invalid JSON data']}
+            }, status=400)
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'errors': {'__all__': [str(e)]}
+            }, status=404)
+        
+        # Validate
+        errors = {}
+        sku = (data.get('sku') or '').strip()
+        format_type = data.get('format_type')
+        stock_quantity = data.get('stock_quantity', 0)
+        
+        if not sku:
+            errors['sku'] = ['SKU is required']
+        elif BookFormat.objects.filter(sku=sku).exists():
+            errors['sku'] = ['SKU already exists']
+        
+        if not format_type:
+            errors['format_type'] = ['Format type is required']
+        elif BookFormat.objects.filter(product=product, format_type=format_type).exists():
+            errors['format_type'] = ['This format already exists for this product']
+        
+        try:
+            stock_quantity = int(stock_quantity)
+            if stock_quantity < 0:
+                errors['stock_quantity'] = ['Stock cannot be negative']
+        except (TypeError, ValueError):
+            errors['stock_quantity'] = ['Invalid stock quantity']
+        
+        if errors:
+            return JsonResponse({'success': False, 'errors': errors}, status=400)
+        
+        # Create format
+        from django.db import transaction
+        try:
+            with transaction.atomic():
+                book_format = BookFormat.objects.create(
+                    product=product,
+                    sku=sku,
+                    format_type=format_type,
+                    stock_quantity=stock_quantity,
+                    is_active=data.get('is_active', True)
+                )
+                
+                return JsonResponse({
+                    'success': True,
+                    'format_id': book_format.id,
+                    'format': {
+                        'id': book_format.id,
+                        'sku': book_format.sku,
+                        'format_type': book_format.format_type,
+                        'format_type_display': book_format.get_format_type_display(),
+                        'stock_quantity': book_format.stock_quantity,
+                        'is_active': book_format.is_active
+                    }
+                })
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'errors': {'__all__': [str(e)]}
+            }, status=500)
+
+
+class ProductImageUploadApiView(StaffRequiredMixin, View):
+    """✅ ROBUSTNESS: Upload a single image to existing product"""
+    def post(self, request, pk):
+        try:
+            product = get_object_or_404(Product, pk=pk)
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'errors': {'__all__': [str(e)]}
+            }, status=404)
+        
+        # Check image count
+        if product.images.count() >= 5:
+            return JsonResponse({
+                'success': False,
+                'errors': {'image': ['Maximum 5 images allowed']}
+            }, status=400)
+        
+        image = request.FILES.get('image')
+        if not image:
+            return JsonResponse({
+                'success': False,
+                'errors': {'image': ['No image provided']}
+            }, status=400)
+        
+        # Validate image
+        try:
+            _validate_image_file(image, required=True)
+        except forms.ValidationError as e:
+            return JsonResponse({
+                'success': False,
+                'errors': {'image': e.messages}
+            }, status=400)
+        
+        # Create image
+        from django.db import transaction
+        try:
+            with transaction.atomic():
+                # If this is first image, make it primary
+                is_first = product.images.count() == 0
+                
+                product_image = ProductImage.objects.create(
+                    product=product,
+                    image=image,
+                    is_primary=is_first,
+                    alt_text=request.POST.get('alt_text', '')
+                )
+                
+                return JsonResponse({
+                    'success': True,
+                    'image_id': product_image.id,
+                    'image': {
+                        'id': product_image.id,
+                        'url': product_image.image.url if product_image.image else None,
+                        'is_primary': product_image.is_primary,
+                        'alt_text': product_image.alt_text
+                    }
+                })
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'errors': {'image': [str(e)]}
+            }, status=500)
+
+
+class ProductImagesListApiView(StaffRequiredMixin, View):
+    """✅ ROBUSTNESS: Get all images for a product"""
+    def get(self, request, pk):
+        try:
+            product = get_object_or_404(Product, pk=pk)
+            images = []
+            
+            for img in product.images.all().order_by('-is_primary', 'id'):
+                images.append({
+                    'id': img.id,
+                    'url': img.image.url if img.image else None,
+                    'is_primary': img.is_primary,
+                    'alt_text': img.alt_text
+                })
+            
+            return JsonResponse({'images': images})
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'error': str(e)
+            }, status=500)
+
+
+class ProductImageDeleteApiView(StaffRequiredMixin, View):
+    """✅ ROBUSTNESS: Delete a product image"""
+    def post(self, request, image_id):
+        try:
+            image = get_object_or_404(ProductImage, id=image_id)
+            image.delete()
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Image deleted successfully'
+            })
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'message': str(e)
+            }, status=500)
+        
+class ReviewListView(StaffRequiredMixin, TemplateView):
+    """
+    Admin moderation panel for Ratings & Reviews.
+    Filters: product, rating, date range, approval status.
+    Bulk actions: approve, unapprove, soft-delete.
+    """
+
+    template_name = "admin/review_list.html"
+    paginate_by = 25
+
+    def get_queryset(self):
+        qs = Review.objects.select_related("product", "user", "order").filter(
+            is_deleted=False
+        )
+
+        request = self.request
+        q = (request.GET.get("q") or "").strip()
+        product_id = request.GET.get("product")
+        rating = request.GET.get("rating")
+        status = request.GET.get("status")
+        date_from = request.GET.get("date_from")
+        date_to = request.GET.get("date_to")
+
+        if q:
+            qs = qs.filter(
+                Q(product__name__icontains=q)
+                | Q(user__username__icontains=q)
+                | Q(user__email__icontains=q)
+            )
+        if product_id:
+            try:
+                qs = qs.filter(product_id=int(product_id))
+            except (TypeError, ValueError):
+                pass
+        if rating:
+            try:
+                qs = qs.filter(rating=int(rating))
+            except (TypeError, ValueError):
+                pass
+        if status == "approved":
+            qs = qs.filter(is_approved=True)
+        elif status == "unapproved":
+            qs = qs.filter(is_approved=False)
+        if date_from:
+            try:
+                df = parse_date(date_from)
+                if df:
+                    qs = qs.filter(created_at__date__gte=df)
+            except Exception:
+                pass
+        if date_to:
+            try:
+                dt = parse_date(date_to)
+                if dt:
+                    qs = qs.filter(created_at__date__lte=dt)
+            except Exception:
+                pass
+
+        return qs.order_by("-created_at")
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        qs = self.get_queryset()
+        paginator = Paginator(qs, self.paginate_by)
+        page_number = self.request.GET.get("page")
+        try:
+            page_obj = paginator.page(page_number)
+        except PageNotAnInteger:
+            page_obj = paginator.page(1)
+        except EmptyPage:
+            page_obj = paginator.page(paginator.num_pages)
+
+        context["active_menu"] = "reviews"
+        context["reviews"] = page_obj.object_list
+        context["page_obj"] = page_obj
+        context["paginator"] = paginator
+        context["is_paginated"] = paginator.num_pages > 1
+        context["products"] = Product.objects.order_by("name").only("id", "name")
+        context["filter_q"] = (self.request.GET.get("q") or "").strip()
+        context["filter_product"] = self.request.GET.get("product") or ""
+        context["filter_rating"] = self.request.GET.get("rating") or ""
+        context["filter_status"] = self.request.GET.get("status") or ""
+        context["filter_date_from"] = self.request.GET.get("date_from") or ""
+        context["filter_date_to"] = self.request.GET.get("date_to") or ""
+        return context
+
+    @transaction.atomic
+    def post(self, request, *args, **kwargs):
+        action = request.POST.get("action")
+        ids = request.POST.getlist("selected")
+        if not action or not ids:
+            messages.warning(request, "Please select at least one review and an action.")
+            return redirect("admin_panel:review_list")
+
+        try:
+            ids_int = [int(x) for x in ids]
+        except (TypeError, ValueError):
+            messages.error(request, "Invalid review selection.")
+            return redirect("admin_panel:review_list")
+
+        reviews = list(
+            Review.objects.select_for_update()
+            .select_related("product")
+            .filter(id__in=ids_int)
+        )
+        if not reviews:
+            messages.info(request, "No reviews found for the selected IDs.")
+            return redirect("admin_panel:review_list")
+
+        if action == "approve":
+            for r in reviews:
+                if not r.is_approved and not r.is_deleted:
+                    r.is_approved = True
+                    r.save(update_fields=["is_approved"])
+            messages.success(request, "Selected reviews have been approved.")
+        elif action == "unapprove":
+            for r in reviews:
+                if r.is_approved and not r.is_deleted:
+                    r.is_approved = False
+                    r.save(update_fields=["is_approved"])
+            messages.success(request, "Selected reviews have been unapproved.")
+        elif action == "delete":
+            for r in reviews:
+                if not r.is_deleted:
+                    r.is_deleted = True
+                    r.save(update_fields=["is_deleted"])
+            messages.success(request, "Selected reviews have been deleted.")
+        else:
+            messages.error(request, "Unknown action.")
+
+        return redirect("admin_panel:review_list")

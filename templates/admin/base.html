@@ -45,6 +45,10 @@
                     <i class="fas fa-child"></i>
                     <span>Age Groups</span>
                 </a>
+                <a href="{% url 'admin_panel:review_list' %}" class="nav-item {% if active_menu == 'reviews' %}active{% endif %}">
+                    <i class="fas fa-star"></i>
+                    <span>Reviews</span>
+                </a>
                 <a href="{% url 'admin_panel:message_list' %}" class="nav-item {% if active_menu == 'messages' %}active{% endif %}">
                     <i class="fas fa-envelope"></i>
                     <span>Messages</span>

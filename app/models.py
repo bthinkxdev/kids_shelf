@@ -6,7 +6,10 @@ from django.utils import timezone
 from django.utils.text import slugify
 import hashlib
 import secrets
-
+from django.core.validators import MaxValueValidator, MinValueValidator
+from django.db.models import Avg, Count
+from django.db.models.signals import post_save, post_delete
+from django.dispatch import receiver
 
 class TimeStampedModel(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
@@ -102,6 +105,16 @@ class Product(TimeStampedModel):
     is_featured = models.BooleanField(default=False, db_index=True)
     is_bestseller = models.BooleanField(default=False, db_index=True)
     is_active = models.BooleanField(default=True, db_index=True)
+    average_rating = models.DecimalField(
+        max_digits=3,
+        decimal_places=2,
+        default=0,
+        help_text="Average star rating from verified reviews (1-5).",
+    )
+    total_reviews = models.PositiveIntegerField(
+        default=0,
+        help_text="Total number of approved, non-deleted reviews.",
+    )
 
     objects = ProductQuerySet.as_manager()
 
@@ -136,28 +149,140 @@ class Product(TimeStampedModel):
             return round(discount)
         except (TypeError, ValueError, ZeroDivisionError):
             return 0
+    
     @property
     def age_range_display(self):
         """
         Returns human-readable age range with full null safety.
         Returns 'All Ages' if no age groups selected.
         """
-        if not self.pk:  # Unsaved product
+        if not self.pk:  
             return "Not specified"
         
-        age_groups = self.age_groups.filter(is_active=True).order_by('display_order')
-        
-        if not age_groups.exists():
+        try:
+            age_groups = self.age_groups.filter(is_active=True).order_by('display_order')
+            
+            if not age_groups.exists():
+                return "All Ages"
+            
+            names = [ag.name for ag in age_groups]
+            
+            if len(names) == 1:
+                return names[0]
+            elif len(names) == 2:
+                return f"{names[0]} & {names[1]}"
+            else:
+                return f"{names[0]} - {names[-1]}"
+        except Exception:
             return "All Ages"
+    
+    def has_available_stock(self):
+       
+        if not self.pk:
+            return False
         
-        names = [ag.name for ag in age_groups]
+        try:
+            return self.formats.filter(
+                is_active=True,
+                stock_quantity__gt=0
+            ).exists()
+        except Exception:
+            return False
+    
+    def get_available_formats(self):
         
-        if len(names) == 1:
-            return names[0]
-        elif len(names) == 2:
-            return f"{names[0]} & {names[1]}"
-        else:
-            return f"{names[0]} - {names[-1]}"
+        if not self.pk:
+            return BookFormat.objects.none()
+        
+        try:
+            return self.formats.filter(
+                is_active=True,
+                stock_quantity__gt=0
+            ).order_by('format_type')
+        except Exception:
+            return BookFormat.objects.none()
+    
+    def get_primary_image(self):
+        
+        if not self.pk:
+            return None
+        
+        try:
+            primary = self.images.filter(is_primary=True).first()
+            if primary and primary.image:
+                return primary
+            
+            first = self.images.filter(image__isnull=False).exclude(image='').first()
+            return first
+        except Exception:
+            return None
+    
+    def get_primary_image_url(self):
+        
+        try:
+            img = self.get_primary_image()
+            if img and img.image:
+                return img.image.url
+        except Exception:
+            pass
+        return None
+    
+    def get_all_image_urls(self):
+        
+        if not self.pk:
+            return []
+        
+        try:
+            urls = []
+            for img in self.images.filter(image__isnull=False).exclude(image='').order_by('-is_primary', 'id'):
+                if img.image:
+                    try:
+                        urls.append(img.image.url)
+                    except Exception:
+                        continue
+            return urls
+        except Exception:
+            return []
+    
+    def get_total_stock(self):
+        
+        if not self.pk:
+            return 0
+        
+        try:
+            from django.db.models import Sum
+            result = self.formats.filter(is_active=True).aggregate(
+                total=Sum('stock_quantity')
+            )
+            return result.get('total') or 0
+        except Exception:
+            return 0
+    
+    def get_default_format(self):
+        
+        if not self.pk:
+            return None
+        
+        try:
+            available = self.get_available_formats()
+            
+            if not available.exists():
+                return None
+            
+            # Try hardcover first
+            hardcover = available.filter(format_type='hardcover').first()
+            if hardcover:
+                return hardcover
+            
+            # Try paperback next
+            paperback = available.filter(format_type='paperback').first()
+            if paperback:
+                return paperback
+            
+            # Return first available
+            return available.first()
+        except Exception:
+            return None
 
     def __str__(self):
         return f"{self.name} by {self.author}"
@@ -203,8 +328,25 @@ class BookFormat(TimeStampedModel):
             models.Index(fields=["product", "is_active", "stock_quantity"]),
         ]
 
+    def is_available(self):
+        
+        try:
+            return self.is_active and self.stock_quantity > 0
+        except Exception:
+            return False
+    
+    def can_fulfill_quantity(self, quantity):
+        
+        try:
+            return self.is_active and self.stock_quantity >= quantity
+        except Exception:
+            return False
+    
     def __str__(self):
-        return f"{self.product.name} - {self.get_format_type_display()}"
+        try:
+            return f"{self.product.name} - {self.get_format_type_display()}"
+        except Exception:
+            return f"BookFormat #{self.pk}"
 
 
 class Cart(TimeStampedModel):
@@ -234,25 +376,39 @@ class Cart(TimeStampedModel):
 class CartItem(TimeStampedModel):
     cart = models.ForeignKey(Cart, on_delete=models.CASCADE, related_name="items")
     product = models.ForeignKey(Product, on_delete=models.PROTECT, related_name="cart_items")
-    variant = models.ForeignKey(BookFormat, on_delete=models.PROTECT, related_name="cart_items")
+    variant = models.ForeignKey(
+        BookFormat, 
+        on_delete=models.PROTECT, 
+        related_name="cart_items",
+        null=True,  
+        blank=True  
+    )
     quantity = models.PositiveIntegerField(default=1, validators=[MinValueValidator(1)])
     unit_price = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0)])
-
-    class Meta:
-        constraints = [
-            models.UniqueConstraint(fields=["cart", "variant"], name="unique_cart_variant"),
-            models.CheckConstraint(condition=models.Q(quantity__gte=1), name="cartitem_qty_positive"),
-        ]
-        indexes = [
-            models.Index(fields=["cart", "product"]),
-        ]
-
+    
+    def get_format_display(self):
+        
+        try:
+            if self.variant and self.variant.format_type:
+                return self.variant.get_format_type_display()
+        except Exception:
+            pass
+        return "Unknown Format"
+    
+    def has_sufficient_stock(self):
+        
+        try:
+            if not self.variant:
+                return False
+            return self.variant.stock_quantity >= self.quantity
+        except Exception:
+            return False
     @property
     def line_total(self):
-        return self.unit_price * self.quantity
-
-    def __str__(self):
-        return f"{self.product.name} x {self.quantity}"
+        try:
+            return (self.unit_price or 0) * self.quantity
+        except Exception:
+            return 0
 
 
 class Address(TimeStampedModel):
@@ -374,6 +530,33 @@ class UserProfile(TimeStampedModel):
     def __str__(self):
         return f"Profile: {self.user.email}"
 
+class Wishlist(TimeStampedModel):
+    """User wishlist for books."""
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="wishlist_items",
+    )
+    product = models.ForeignKey(
+        "Product",
+        on_delete=models.CASCADE,
+        related_name="wishlisted_by",
+    )
+
+    class Meta:
+        ordering = ["-created_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "product"],
+                name="unique_user_product_wishlist",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["user"]),
+        ]
+
+    def __str__(self):
+        return f"{self.user} — {self.product}"
 
 class OTPRequest(TimeStampedModel):
     """Store OTP requests for email-based authentication"""
@@ -411,3 +594,107 @@ class OTPRequest(TimeStampedModel):
     def generate_otp(cls):
         """Generate a secure 4-digit OTP"""
         return str(secrets.randbelow(10000)).zfill(4)
+
+class Review(TimeStampedModel):
+    """
+    Product review from a verified buyer.
+
+    Business rules:
+    - Only logged-in users can create reviews (enforced in views).
+    - User must have at least one delivered order for the product.
+    - One review per (product, user).
+    - Rating is 1–5 stars.
+    - Reviews can be moderated via is_approved.
+    - Reviews are soft-deleted via is_deleted flag.
+    """
+
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.PROTECT,
+        related_name="reviews",
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name="reviews",
+        null=True,
+        blank=True,
+    )
+    order = models.ForeignKey(
+        "Order",
+        on_delete=models.SET_NULL,
+        related_name="reviews",
+        null=True,
+        blank=True,
+        help_text="The delivered order that verified this review.",
+    )
+    rating = models.PositiveSmallIntegerField(
+        validators=[MinValueValidator(1), MaxValueValidator(5)],
+    )
+    title = models.CharField(max_length=200, blank=True)
+    comment = models.TextField(blank=True)
+    is_approved = models.BooleanField(
+        default=True,
+        db_index=True,
+        help_text="Only approved reviews are shown on the storefront.",
+    )
+    is_deleted = models.BooleanField(
+        default=False,
+        db_index=True,
+        help_text="Soft delete flag; deleted reviews are hidden but kept for history.",
+    )
+
+    class Meta:
+        ordering = ["-created_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["product", "user"],
+                name="unique_product_user_review",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(rating__gte=1) & models.Q(rating__lte=5),
+                name="review_rating_between_1_and_5",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["product"]),
+            models.Index(fields=["rating"]),
+            models.Index(fields=["is_approved"]),
+            models.Index(fields=["product", "is_approved"]),
+        ]
+
+    def __str__(self):
+        uname = getattr(self.user, "username", "Anonymous")
+        return f"Review for {self.product} by {uname} ({self.rating}★)"
+
+
+def _recompute_product_rating(product_id: int):
+    """
+    Recompute average_rating and total_reviews for a single product.
+    Only considers approved, non-deleted reviews.
+    """
+    if not product_id:
+        return
+    qs = Review.objects.filter(
+        product_id=product_id,
+        is_approved=True,
+        is_deleted=False,
+    )
+    agg = qs.aggregate(
+        avg=Avg("rating"),
+        cnt=Count("id"),
+    )
+    Product.objects.filter(pk=product_id).update(
+        average_rating=agg["avg"] or 0,
+        total_reviews=agg["cnt"] or 0,
+    )
+
+
+@receiver(post_save, sender=Review)
+def review_post_save(sender, instance: Review, **kwargs):
+    _recompute_product_rating(instance.product_id)
+
+
+@receiver(post_delete, sender=Review)
+def review_post_delete(sender, instance: Review, **kwargs):
+    _recompute_product_rating(instance.product_id)

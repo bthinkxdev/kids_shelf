@@ -126,7 +126,35 @@ class ProductForm(forms.ModelForm):
         self.fields["slug"].required = False        
         self.fields["age_groups"].queryset = AgeGroup.objects.filter(is_active=True).order_by('display_order')
 
-
+def _validate_image_file(image, required=False):
+    """Reusable image validator for AJAX upload views."""
+    if not image and not required:
+        return image
+    if not image and required:
+        raise forms.ValidationError("Image is required.")
+    if image and hasattr(image, "size"):
+        max_size = 5 * 1024 * 1024
+        if image.size > max_size:
+            raise forms.ValidationError(
+                f"Image file size cannot exceed 5MB. Current size: {image.size / (1024*1024):.2f}MB"
+            )
+        try:
+            from PIL import Image as PILImage
+            img = PILImage.open(image)
+            width, height = img.size
+            if width * height > 5_000_000:
+                raise forms.ValidationError(
+                    "Image resolution cannot exceed 5 megapixels. Please resize or compress."
+                )
+            img.verify()
+            image.seek(0)
+        except forms.ValidationError:
+            raise
+        except Exception:
+            raise forms.ValidationError(
+                "Invalid image file. Please upload a valid image (JPG, PNG, GIF, WebP)."
+            )
+    return image
 class ProductImageForm(forms.ModelForm):
     class Meta:
         model = ProductImage
@@ -226,3 +254,51 @@ BookFormatFormSet = inlineformset_factory(
     Product, BookFormat, form=BookFormatForm, formset=BookFormatInlineFormSet,
     extra=2, can_delete=True, max_num=4,
 )
+
+class ProductBasicForm(forms.ModelForm):
+    """
+    Slim form for AJAX Step 1 (POST /admin/products/create-basic/).
+    No images, no formats. age_groups handled separately in the view.
+    """
+    age_groups = forms.ModelMultipleChoiceField(
+        queryset=AgeGroup.objects.filter(is_active=True),
+        required=False
+    )
+
+    class Meta:
+        model = Product
+        fields = [
+            "category", "name", "slug", "description",
+            "author", "illustrator", "publisher",
+            "publication_year", "isbn", "page_count",
+            "language", "price", "original_price",
+            "is_featured", "is_bestseller", "is_active",
+        ]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["slug"].required = False
+        self.fields["original_price"].required = False
+        self.fields["description"].required = False
+        self.fields["illustrator"].required = False
+        self.fields["publisher"].required = False
+        self.fields["publication_year"].required = False
+        self.fields["isbn"].required = False
+        self.fields["page_count"].required = False
+
+        active_cats = Category.objects.filter(is_active=True)
+        if self.instance and self.instance.pk and self.instance.category_id:
+            current = self.instance.category
+            if current and not current.is_active:
+                active_cats = active_cats | Category.objects.filter(pk=current.pk)
+        self.fields["category"].queryset = active_cats.order_by("name")
+
+    def clean(self):
+        cleaned_data = super().clean()
+        price = cleaned_data.get("price")
+        original_price = cleaned_data.get("original_price")
+        if original_price and not price:
+            raise forms.ValidationError("Selling price is required when original price is set.")
+        if original_price and price and original_price <= price:
+            raise forms.ValidationError("Original price must be greater than the selling price.")
+        return cleaned_data

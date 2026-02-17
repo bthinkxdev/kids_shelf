@@ -269,49 +269,91 @@ if (socialToggle && socialMenu) {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-    // Only target notifications inside the product detail section
-    const staticNotification = document.querySelector('.product-detail .notification.error');
+    const notification = document.querySelector('.notification.error');
     
-    if (staticNotification) {
-        const message = staticNotification.textContent.trim();
-        
-        // Remove ONLY this specific notification
-        staticNotification.remove();
-        
-        // Show it using the proper notification system
-        showNotification(message, 'error');
+    if (notification) {
+        showNotification(notification.textContent.trim(), 'error');
+        notification.remove();
     }
 });
 
-// Product Form Debug
-document.addEventListener('DOMContentLoaded', function() {
-    const productForm = document.querySelector('form');
-    
-    if (productForm) {
-        productForm.addEventListener('submit', function(e) {
-            console.log('=== FORM SUBMISSION DEBUG ===');
-            
-            // Check SKUs
-            const skuInputs = document.querySelectorAll('input[name*="sku"]');
-            const skus = [];
-            
-            skuInputs.forEach((input, index) => {
-                if (input.value) {
-                    console.log(`Format ${index} SKU:`, input.value);
-                    skus.push(input.value);
+function initWishlist() {
+    // Load saved product IDs and mark hearts on page
+    if (document.querySelector('.js-wishlist-toggle')) {
+        fetch('/wishlist/ids/', {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(r => r.ok ? r.json() : { product_ids: [] })
+        .then(data => {
+            const ids = new Set((data.product_ids || []).map(String));
+            document.querySelectorAll('.js-wishlist-toggle[data-product-id]').forEach(btn => {
+                const pid = String(btn.dataset.productId);
+                if (ids.has(pid)) {
+                    btn.classList.add('in-wishlist');
+                    const heart = btn.querySelector('.wishlist-heart, .wishlist-nav-icon');
+                    if (heart) heart.setAttribute('fill', 'currentColor');
                 }
             });
-            
-            // Check for duplicates
-            const duplicates = skus.filter((item, index) => skus.indexOf(item) !== index);
-            if (duplicates.length > 0) {
-                console.error('DUPLICATE SKUs DETECTED:', duplicates);
-                alert(`Duplicate SKU(s) detected: ${duplicates.join(', ')}\n\nEach SKU must be unique!`);
-                e.preventDefault();
-                return false;
-            }
-            
-            console.log('Form validation passed');
-        });
+        })
+        .catch(() => {});
     }
-});
+
+    // Handle clicks
+    document.addEventListener('click', function(e) {
+        const btn = e.target.closest('.js-wishlist-toggle');
+        if (!btn) return;
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        const productId = btn.dataset.productId;
+        if (!productId) return;
+
+        fetch('/wishlist/toggle/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken'),
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            body: JSON.stringify({ product_id: parseInt(productId) }),
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.login_required) {
+                window.location.href = data.login_url;
+                return;
+            }
+            if (!data.success) {
+                showNotification(data.error || 'Could not update wishlist.', 'error');
+                return;
+            }
+
+            // Toggle all hearts with same product id (navbar + page button)
+            document.querySelectorAll(`.js-wishlist-toggle[data-product-id="${productId}"]`).forEach(el => {
+                el.classList.toggle('in-wishlist', data.added);
+                const heart = el.querySelector('.wishlist-heart, .wishlist-nav-icon');
+                if (heart) {
+                    heart.setAttribute('fill', data.added ? 'currentColor' : 'none');
+                }
+                el.setAttribute('aria-label', data.added ? 'Remove from wishlist' : 'Add to wishlist');
+            });
+
+            // If on wishlist page, remove the card
+            if (!data.added) {
+                const card = btn.closest('.wishlist-item');
+                if (card) {
+                    card.style.transition = 'opacity 0.3s, transform 0.3s';
+                    card.style.opacity = '0';
+                    card.style.transform = 'scale(0.9)';
+                    setTimeout(() => card.remove(), 300);
+                }
+            }
+
+            showNotification(data.added ? '❤️ Added to wishlist!' : 'Removed from wishlist.');
+        })
+        .catch(() => showNotification('Could not update wishlist.', 'error'));
+    });
+}
+
+document.addEventListener('DOMContentLoaded', initWishlist);

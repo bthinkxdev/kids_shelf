@@ -8,6 +8,7 @@ urlpatterns = [
     path("", views.HomeView.as_view(), name="home"),
     path("products/", views.ProductListView.as_view(), name="product_list"),
     path("products/<slug:slug>/", views.ProductDetailView.as_view(), name="product_detail"),
+    path("api/products/<int:product_id>/reviews/", views.ProductReviewCreateView.as_view(), name="product_review_create"),
     path("cart/", views.CartView.as_view(), name="cart"),
     path("cart/add/", views.AddToCartView.as_view(), name="cart_add"),
     path("cart/update/", views.UpdateCartItemView.as_view(), name="cart_update"),
@@ -25,5 +26,8 @@ urlpatterns = [
     path("terms/", views.StaticPageView.as_view(template_name="terms.html", extra_context={"active_page": "terms"}), name="terms"),
     path("refund/", views.StaticPageView.as_view(template_name="refund.html", extra_context={"active_page": "refund"}), name="refund"),
     path("shipping/", views.StaticPageView.as_view(template_name="shipping.html", extra_context={"active_page": "shipping"}), name="shipping"),
+    path("wishlist/", views.WishlistPageView.as_view(), name="wishlist"),
+    path("wishlist/toggle/", views.WishlistToggleView.as_view(), name="wishlist_toggle"),
+    path("wishlist/ids/", views.WishlistIdsView.as_view(), name="wishlist_ids"),
 ]
 

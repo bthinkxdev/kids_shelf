@@ -217,3 +217,31 @@ class AddressForm(forms.ModelForm):
             }),
         }
 
+class ReviewForm(forms.Form):
+    rating = forms.IntegerField(
+        min_value=1,
+        max_value=5,
+        error_messages={
+            "required": "Please select a rating.",
+            "min_value": "Rating must be at least 1 star.",
+            "max_value": "Rating cannot exceed 5 stars.",
+        },
+    )
+    title = forms.CharField(
+        max_length=200,
+        required=False,
+        widget=forms.TextInput(attrs={
+            "class": "form-control",
+            "placeholder": "Summary of your review (optional)",
+            "id": "id_title",
+        }),
+    )
+    comment = forms.CharField(
+        required=False,
+        widget=forms.Textarea(attrs={
+            "class": "form-control",
+            "placeholder": "Share your experience with this book...",
+            "rows": 4,
+            "id": "id_comment",
+        }),
+    )

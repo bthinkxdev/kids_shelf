@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}My Wishlist - Kids Shelf{% endblock %}
+{% block meta_description %}Your saved books.{% endblock %}
+
+{% block content %}
+<section class="wishlist-page">
+    <div class="container">
+        <div class="section-header" style="margin-bottom: var(--space-8);">
+            <h1 class="section-title">My Wishlist</h1>
+            <p class="section-subtitle">Books you've saved for later 📚❤️</p>
+        </div>
+
+        {% if wishlist_products %}
+            <div class="wishlist-grid">
+                {% for product in wishlist_products %}
+                    <div class="wishlist-item" data-product-id="{{ product.id }}">
+                        <a href="{% url 'store:product_detail' product.slug %}" class="wishlist-item-link">
+                            <div class="wishlist-item-image">
+                                {% with image=product.images.first %}
+                                    {% if image %}
+                                        <img src="{{ image.image.url }}" alt="{{ product.name }}" loading="lazy">
+                                    {% else %}
+                                        <img src="{% static 'images/banner.png' %}" alt="{{ product.name }}" loading="lazy">
+                                    {% endif %}
+                                {% endwith %}
+                            </div>
+                            <div class="wishlist-item-info">
+                                <span class="wishlist-item-category">{{ product.category.name|default:"" }}</span>
+                                <h3 class="wishlist-item-name">{{ product.name }}</h3>
+                                <p class="wishlist-item-color">by {{ product.author }}</p>
+                                <p class="wishlist-item-price">₹{{ product.price }}</p>
+                            </div>
+                        </a>
+                        <div class="wishlist-item-actions">
+                            <button type="button"
+                                    class="btn btn-ghost js-wishlist-toggle in-wishlist"
+                                    data-product-id="{{ product.id }}"
+                                    aria-label="Remove from wishlist">
+                                <svg class="wishlist-heart" viewBox="0 0 24 24"
+                                     stroke="currentColor" stroke-width="2" fill="currentColor">
+                                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                                </svg>
+                                Remove
+                            </button>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty-wishlist">
+                <div class="empty-wishlist-icon">❤️</div>
+                <h2>Your Wishlist is Empty</h2>
+                <p>Save books you love by clicking the heart on product cards or book pages.</p>
+                <a href="{% url 'store:product_list' %}" class="btn btn-primary">
+                    <span>Browse Books</span>
+                    <svg class="btn-icon" viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" stroke-width="2">
+                        <path d="M5 12h14M12 5l7 7-7 7"/>
+                    </svg>
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}

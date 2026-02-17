@@ -18,11 +18,22 @@ urlpatterns = [
     path("categories/<int:pk>/edit/", admin_views.CategoryUpdateView.as_view(), name="category_edit"),
     path("categories/<int:pk>/delete/", admin_views.CategoryDeleteView.as_view(), name="category_delete"),
     
-    # Products
+    # Products — list, create, edit, delete
     path("products/", admin_views.ProductListView.as_view(), name="product_list"),
     path("products/create/", admin_views.ProductCreateView.as_view(), name="product_create"),
     path("products/<int:pk>/edit/", admin_views.ProductUpdateView.as_view(), name="product_edit"),
+    path("products/<int:pk>/update-basic/", admin_views.ProductUpdateBasicView.as_view(), name="product_update_basic"),
     path("products/<int:pk>/delete/", admin_views.ProductDeleteView.as_view(), name="product_delete"),
+
+    # Product  — Step 1: create basic info
+    path("products/create-basic/", admin_views.ProductCreateBasicView.as_view(), name="product_create_basic"),
+
+    path("products/<int:pk>/images/", admin_views.ProductImagesListApiView.as_view(), name="product_images_list"),
+    path("products/<int:pk>/images/upload/", admin_views.ProductImageUploadApiView.as_view(), name="product_image_upload"),
+    path("products/images/<int:image_id>/delete/", admin_views.ProductImageDeleteApiView.as_view(), name="product_image_delete"),
+
+    path("products/<int:pk>/formats/", admin_views.ProductFormatsListApiView.as_view(), name="product_formats_list"),
+    path("products/<int:pk>/formats/add/", admin_views.ProductFormatAddApiView.as_view(), name="product_format_add"),
     
     # Orders
     path("orders/", admin_views.OrderListView.as_view(), name="order_list"),
@@ -39,5 +50,7 @@ urlpatterns = [
     path('age-groups/create/', admin_views.AgeGroupCreateView.as_view(), name='age_group_create'),
     path('age-groups/<int:pk>/edit/', admin_views.AgeGroupUpdateView.as_view(), name='age_group_update'),
     path('age-groups/<int:pk>/delete/', admin_views.AgeGroupDeleteView.as_view(), name='age_group_delete'),
-]
 
+    # Reviews
+    path("reviews/", admin_views.ReviewListView.as_view(), name="review_list"),
+]
