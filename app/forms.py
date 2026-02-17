@@ -50,12 +50,25 @@ class CheckoutForm(forms.Form):
         cleaned_data = super().clean()
         selected_address = cleaned_data.get('selected_address')
         use_new_address = cleaned_data.get('use_new_address')
-        
-        # If using existing address
+        is_guest = not self.user
+
+        # Guest: must use new address; email required
+        if is_guest:
+            use_new_address = True
+            cleaned_data['use_new_address'] = True
+            cleaned_data['selected_address'] = None
+            if not cleaned_data.get('email'):
+                self.add_error('email', 'Email is required for checkout.')
+            required_fields = ['full_name', 'phone', 'email', 'address_line', 'city', 'state', 'pincode']
+            for field in required_fields:
+                if not cleaned_data.get(field):
+                    self.add_error(field, 'This field is required.')
+            return cleaned_data
+
+        # Authenticated: existing or new address
         if selected_address and not use_new_address:
             try:
                 address = Address.objects.get(pk=selected_address, user=self.user, is_snapshot=False)
-                # Populate form data from selected address
                 cleaned_data['full_name'] = address.full_name
                 cleaned_data['phone'] = address.phone
                 cleaned_data['email'] = address.email
@@ -66,23 +79,19 @@ class CheckoutForm(forms.Form):
             except Address.DoesNotExist:
                 raise forms.ValidationError("Selected address not found.")
         else:
-            # If not using existing address and no saved addresses, require new address
             if not use_new_address and not selected_address:
-                # Check if user has any saved addresses
-                if self.user and Address.objects.filter(user=self.user, is_snapshot=False).exists():
+                if Address.objects.filter(user=self.user, is_snapshot=False).exists():
                     raise forms.ValidationError("Please select an address or add a new one.")
                 else:
-                    # No saved addresses, require new address
                     use_new_address = True
                     cleaned_data['use_new_address'] = True
-            
-            # Validate new address fields
+
             if use_new_address:
                 required_fields = ['full_name', 'phone', 'address_line', 'city', 'state', 'pincode']
                 for field in required_fields:
                     if not cleaned_data.get(field):
                         self.add_error(field, 'This field is required.')
-        
+
         return cleaned_data
 
 

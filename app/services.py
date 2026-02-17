@@ -8,16 +8,22 @@ from django.template.loader import render_to_string
 from django.utils.crypto import get_random_string
 import logging
 
-from .models import Address, Cart, CartItem, Order, OrderItem, Payment, BookFormat
+from .models import Address, Cart, CartItem, Order, OrderItem, Payment, BookFormat, Wishlist, Product
+
+# Session key for guest wishlist (product IDs)
+WISHLIST_SESSION_KEY = "wishlist"
+
+
+logger_services = logging.getLogger(__name__)
 
 
 def send_order_notification_email(order, request=None):
     """Send order notification email to admin/owner when a new order is placed."""
     admin_emails = getattr(settings, 'ADMIN_NOTIFICATION_EMAILS', [])
     if not admin_emails:
-        print("No admin emails configured for order notifications")
+        logger_services.warning("No admin emails configured for order notifications")
         return False
-    
+
     if request:
         order_url = request.build_absolute_uri(f'/dashboard/orders/{order.order_number}/')
     else:
@@ -27,19 +33,19 @@ def send_order_notification_email(order, request=None):
     payment_method = "Cash on Delivery"
     if hasattr(order, 'payment'):
         payment_method = order.payment.get_method_display()
-    
+
     context = {
         'order': order,
         'order_url': order_url,
         'payment_method': payment_method,
         'site_name': 'Golden Elegance',
     }
-    
+
     html_message = render_to_string('admin/order_notification_email.html', context)
     plain_message = render_to_string('admin/order_notification_email.txt', context)
-    
+
     try:
-        print(f"Sending order notification email for order {order.order_number}...")
+        logger_services.info("Sending order notification email for order %s", order.order_number)
         send_mail(
             subject=f'New Order #{order.order_number} - ₹{order.total}',
             message=plain_message,
@@ -48,12 +54,10 @@ def send_order_notification_email(order, request=None):
             html_message=html_message,
             fail_silently=False,
         )
-        print(f"Order notification email sent successfully to {admin_emails}")
+        logger_services.info("Order notification email sent to %s", admin_emails)
         return True
     except Exception as e:
-        print(f"Error sending order notification email: {e}")
-        import traceback
-        traceback.print_exc()
+        logger_services.exception("Error sending order notification email: %s", e)
         return False
 
 
@@ -82,26 +86,34 @@ class CartService:
 
     @classmethod
     def get_or_create_cart(cls, request):
-        """✅ ROBUSTNESS: Get cart with fallback"""
+        """
+        Get or create cart: by user if authenticated, by session_key if guest.
+        Guest: only use carts with user=None to avoid duplicate ACTIVE carts per session.
+        """
         try:
             user = request.user if request.user.is_authenticated else None
             if user:
                 cart, _ = Cart.objects.get_or_create(user=user, status=Cart.Status.ACTIVE)
                 return cart
             session_key = cls._ensure_session_key(request)
-            cart, _ = Cart.objects.get_or_create(session_key=session_key, status=Cart.Status.ACTIVE)
+            cart = Cart.objects.filter(
+                session_key=session_key, status=Cart.Status.ACTIVE, user__isnull=True
+            ).first()
+            if not cart:
+                cart = Cart.objects.create(session_key=session_key, status=Cart.Status.ACTIVE)
             return cart
         except Exception as e:
             raise CartError(f"Failed to get cart: {str(e)}")
 
     @classmethod
     def merge_carts(cls, user, session_key):
-        """✅ ROBUSTNESS: Merge guest cart into user cart safely"""
+        """Merge guest cart (session) into user cart; then mark session cart abandoned."""
         if not user or not session_key:
             return
-        
         try:
-            session_cart = Cart.objects.get(session_key=session_key, status=Cart.Status.ACTIVE)
+            session_cart = Cart.objects.get(
+                session_key=session_key, status=Cart.Status.ACTIVE, user__isnull=True
+            )
         except Cart.DoesNotExist:
             return
         
@@ -126,7 +138,6 @@ class CartService:
             session_cart.status = Cart.Status.ABANDONED
             session_cart.save(update_fields=["status"])
         except Exception as e:
-            # ✅ ROBUSTNESS: Log error but don't crash
             import logging
             logger = logging.getLogger(__name__)
             logger.error(f"Cart merge failed: {str(e)}")
@@ -136,7 +147,7 @@ class CartService:
         """✅ ROBUSTNESS: Calculate totals with error handling"""
         try:
             subtotal = sum(
-                item.line_total 
+                item.line_total
                 for item in cart.items.select_related("product").all()
             )
             shipping_threshold = getattr(settings, "FREE_SHIPPING_THRESHOLD", 999)
@@ -155,54 +166,37 @@ class CartService:
         Raises StockError if item unavailable.
         Raises CartError for other failures.
         """
-        # ✅ ROBUSTNESS: Validate variant exists
         if not variant:
             raise CartError("Book format is required.")
-        
-        # ✅ ROBUSTNESS: Check if variant is available
         if not variant.is_available():
             raise StockError("This format is out of stock or no longer available.")
-        
-        # ✅ ROBUSTNESS: Validate quantity
         max_qty = getattr(settings, "MAX_CART_QTY", 10)
         try:
             quantity = int(quantity)
             quantity = max(1, min(quantity, max_qty))
         except (TypeError, ValueError):
             raise CartError("Invalid quantity.")
-        
-        # ✅ ROBUSTNESS: Check stock availability
         if not variant.can_fulfill_quantity(quantity):
             raise StockError(
                 f"Only {variant.stock_quantity} available. "
                 f"You requested {quantity}."
             )
-        
         try:
-            # ✅ ROBUSTNESS: Get product safely
             product = variant.product
             if not product.is_active:
                 raise CartError("This book is no longer available.")
-            
-            # ✅ ROBUSTNESS: Check for existing item
             item = CartItem.objects.filter(cart=cart, variant=variant).first()
-            
             if item:
-                # Update existing item
                 new_quantity = min(item.quantity + quantity, max_qty)
-                
                 if not variant.can_fulfill_quantity(new_quantity):
                     raise StockError(
                         f"Only {variant.stock_quantity} available. "
                         f"You already have {item.quantity} in cart."
                     )
-                
                 item.quantity = new_quantity
                 item.unit_price = product.price
                 item.save(update_fields=["quantity", "unit_price", "updated_at"])
                 return item
-            
-            # Create new item
             return CartItem.objects.create(
                 cart=cart,
                 variant=variant,
@@ -221,29 +215,20 @@ class CartService:
     def update_item(item, quantity):
         """✅ ROBUSTNESS: Update cart item with validation"""
         try:
-            # ✅ ROBUSTNESS: Delete if quantity is 0
             if quantity <= 0:
                 item.delete()
                 return
-            
-            # ✅ ROBUSTNESS: Validate variant exists
             if not item.variant:
                 raise CartError("Invalid cart item.")
-            
-            # ✅ ROBUSTNESS: Check availability
             if not item.variant.is_available():
                 raise StockError("This format is no longer available.")
-            
-            # ✅ ROBUSTNESS: Validate quantity
             max_qty = getattr(settings, "MAX_CART_QTY", 10)
             quantity = min(quantity, max_qty)
-            
             if not item.variant.can_fulfill_quantity(quantity):
                 raise StockError(
                     f"Only {item.variant.stock_quantity} available. "
                     f"You requested {quantity}."
                 )
-            
             item.quantity = quantity
             item.unit_price = item.product.price
             item.save(update_fields=["quantity", "unit_price", "updated_at"])
@@ -253,7 +238,7 @@ class CartService:
             raise
         except Exception as e:
             raise CartError(f"Failed to update cart: {str(e)}")
-    
+
     @staticmethod
     def validate_cart(cart):
         """
@@ -264,61 +249,93 @@ class CartService:
         errors = []
         items_to_remove = []
         items_to_update = []
-        
         for item in cart.items.select_related('product', 'variant').all():
-            # Check if variant exists
             if not item.variant:
                 items_to_remove.append(item)
                 errors.append(f"{item.product.name}: Format missing")
                 continue
-            
-            # Check if product is active
             if not item.product.is_active:
                 items_to_remove.append(item)
                 errors.append(f"{item.product.name}: No longer available")
                 continue
-            
-            # Check if variant is available
             if not item.variant.is_available():
                 items_to_remove.append(item)
                 errors.append(f"{item.product.name} ({item.get_format_display()}): Out of stock")
                 continue
-            
-            # Check if quantity is available
             if item.variant.stock_quantity < item.quantity:
                 if item.variant.stock_quantity > 0:
-                    # Reduce quantity to available
                     items_to_update.append((item, item.variant.stock_quantity))
                     errors.append(
                         f"{item.product.name} ({item.get_format_display()}): "
                         f"Reduced to {item.variant.stock_quantity} (low stock)"
                     )
                 else:
-                    # Remove completely
                     items_to_remove.append(item)
                     errors.append(f"{item.product.name} ({item.get_format_display()}): Out of stock")
-        
-        # Remove invalid items
         for item in items_to_remove:
             try:
                 item.delete()
             except Exception:
                 pass
-        
-        # Update quantities
         for item, new_qty in items_to_update:
             try:
                 item.quantity = new_qty
                 item.save(update_fields=['quantity'])
             except Exception:
                 pass
-        
         return {
             'valid': len(errors) == 0,
             'errors': errors,
             'removed_count': len(items_to_remove),
             'updated_count': len(items_to_update)
         }
+
+
+class WishlistService:
+    """Session-based wishlist for guests; merge into DB on login."""
+    WISHLIST_MAX_ITEMS = 50
+
+    @staticmethod
+    def get_guest_ids(session):
+        """Return list of product IDs from session (max WISHLIST_MAX_ITEMS, no duplicates)."""
+        ids = session.get(WISHLIST_SESSION_KEY) or []
+        if not isinstance(ids, list):
+            ids = []
+        seen = set()
+        out = []
+        for x in ids:
+            try:
+                pk = int(x)
+                if pk not in seen and len(out) < WishlistService.WISHLIST_MAX_ITEMS:
+                    seen.add(pk)
+                    out.append(pk)
+            except (TypeError, ValueError):
+                continue
+        return out
+
+    @staticmethod
+    def set_guest_ids(session, ids):
+        """Store product IDs in session (cap at WISHLIST_MAX_ITEMS)."""
+        ids = [int(x) for x in ids[:WishlistService.WISHLIST_MAX_ITEMS] if x is not None]
+        session[WISHLIST_SESSION_KEY] = list(dict.fromkeys(ids))
+        session.modified = True
+
+    @classmethod
+    def merge_into_user(cls, request, user):
+        """Merge session wishlist into user's DB wishlist; clear session wishlist."""
+        ids = cls.get_guest_ids(request.session)
+        if not ids:
+            return
+        valid_ids = set(
+            Product.objects.filter(pk__in=ids, is_active=True).values_list("pk", flat=True)
+        )
+        for product_id in valid_ids:
+            try:
+                Wishlist.objects.get_or_create(user=user, product_id=product_id)
+            except Exception:
+                continue
+        request.session.pop(WISHLIST_SESSION_KEY, None)
+        request.session.modified = True
 
 
 class OrderService:
@@ -332,14 +349,20 @@ class OrderService:
     @classmethod
     @transaction.atomic
     def create_order(cls, cart, form_data, user=None):
-        items = (
+        if cart.status != Cart.Status.ACTIVE:
+            raise CartError("This cart has already been used to place an order.")
+        items = list(
             cart.items.select_related("variant", "product")
             .select_for_update(of=("self",))
             .all()
         )
-        
         if not items:
             raise CartError("Cart is empty.")
+
+        # Lock variant rows to prevent concurrent stock deduction (race condition)
+        variant_ids = [item.variant_id for item in items if item.variant_id]
+        if variant_ids:
+            BookFormat.objects.select_for_update().filter(pk__in=variant_ids).exists()
 
         for item in items:
             # Check variant exists

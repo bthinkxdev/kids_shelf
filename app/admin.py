@@ -64,9 +64,24 @@ class CartItemAdmin(admin.ModelAdmin):
 
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
-    list_display = ("order_number", "user", "status", "total", "created_at")
+    list_display = ("order_number", "user_or_guest", "guest_email", "status", "total", "created_at")
     list_filter = ("status",)
-    search_fields = ("order_number", "user__username")
+    search_fields = ("order_number", "user__username", "user__email", "address__email")
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related("address", "user")
+
+    def user_or_guest(self, obj):
+        if obj.user_id is None:
+            return "Guest Order"
+        return str(obj.user)
+    user_or_guest.short_description = "Customer"
+
+    def guest_email(self, obj):
+        if not obj.address_id:
+            return ""
+        return obj.address.email or obj.address.phone or ""
+    guest_email.short_description = "Email / Phone"
 
 
 @admin.register(OrderItem)

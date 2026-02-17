@@ -169,20 +169,13 @@ class OTPLoginView(View):
             return render(request, self.template_name, context)
     
     def transfer_cart_to_user(self, request, user):
-        """Transfer session cart to authenticated user"""
-        from .models import Cart
-        
+        """Merge session cart into user cart; merge session wishlist into user wishlist."""
+        from .services import CartService, WishlistService
         session_key = request.session.session_key
         if session_key:
-            # Find session cart
-            try:
-                cart = Cart.objects.get(session_key=session_key, status=Cart.Status.ACTIVE)
-                # Assign to user
-                cart.user = user
-                cart.save()
-            except Cart.DoesNotExist:
-                pass
-    
+            CartService.merge_carts(user, session_key)
+        WishlistService.merge_into_user(request, user)
+
     def get_success_url(self):
         """Get redirect URL after login"""
         return self.request.GET.get('next', '/')
@@ -286,17 +279,12 @@ class OTPLoginAjaxView(View):
             }, status=400)
     
     def transfer_cart_to_user(self, request, user):
-        """Transfer session cart to authenticated user"""
-        from .models import Cart
-        
+        """Merge session cart into user cart; merge session wishlist into user wishlist."""
+        from .services import CartService, WishlistService
         session_key = request.session.session_key
         if session_key:
-            try:
-                cart = Cart.objects.get(session_key=session_key, status=Cart.Status.ACTIVE)
-                cart.user = user
-                cart.save()
-            except Cart.DoesNotExist:
-                pass
+            CartService.merge_carts(user, session_key)
+        WishlistService.merge_into_user(request, user)
 
 
 class LogoutView(View):
