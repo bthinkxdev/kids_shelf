@@ -133,12 +133,14 @@
                                                     <img src="{% static 'images/banner.png' %}" alt="{{ product.name }}" loading="lazy">
                                                 {% endif %}
                                             {% endwith %}
-                                            {% if product.is_bestseller %}
-                                                <span class="book-badge">🔥 Bestseller</span>
-                                            {% endif %}
-                                            {% if product.age_range_display %}
-                                                <span class="age-badge">{{ product.age_range_display }}</span>
-                                            {% endif %}
+                                            <div class="product-badges">
+                                                {% if product.is_bestseller %}
+                                                    <span class="book-badge">🔥 Bestseller</span>
+                                                {% endif %}
+                                                {% if product.age_range_display %}
+                                                    <span class="age-badge">{{ product.age_range_display }}</span>
+                                                {% endif %}
+                                            </div>
                                         </div>
                                         <div class="product-info">
                                             <p class="product-category">{{ product.category.name }}</p>

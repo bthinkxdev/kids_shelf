@@ -16,7 +16,7 @@ import hashlib
 from .auth_decorators import LoginRequiredForActionMixin
 from .forms import CartAddForm, CartUpdateForm, CheckoutForm, ContactForm, NewsletterForm, ReviewForm
 from .models import CartItem, Category, Order, OrderItem, Product, ProductImage, BookFormat, Payment, AgeGroup, Review, Wishlist
-from .services import CartError, CartService, OrderService, StockError
+from .services import CartError, CartService, OrderService, StockError, WishlistService
 
 from django.db import IntegrityError, transaction
 from django.db.models import Count
@@ -135,10 +135,10 @@ class ProductDetailView(DetailView):
     slug_url_kwarg = "slug"
 
     def get_queryset(self):
-        # Admin can see ALL products, customers only see active
+        qs = Product.objects.prefetch_related("formats")
         if self.request.user.is_staff:
-            return Product.objects.all()
-        return Product.objects.active()
+            return qs
+        return qs.active()
     
     def get(self, request, *args, **kwargs):
         from django.http import Http404
@@ -176,11 +176,14 @@ class ProductDetailView(DetailView):
         )
         context["add_form"] = CartAddForm(initial={"product_id": product.id, "quantity": 1})
         context["active_page"] = "collection"
-        context["in_wishlist"] = (
-            Wishlist.objects.filter(user=self.request.user, product=product).exists()
-            if self.request.user.is_authenticated
-            else False
-        )
+        if self.request.user.is_authenticated:
+            context["in_wishlist"] = Wishlist.objects.filter(
+                user=self.request.user, product=product
+            ).exists()
+        else:
+            context["in_wishlist"] = product.pk in WishlistService.get_guest_ids(
+                self.request.session
+            )
 
         # ----- Ratings & Reviews -----
         reviews_qs = (
@@ -237,7 +240,7 @@ class ProductDetailView(DetailView):
 
         return context
 
-class CartView(LoginRequiredForActionMixin, TemplateView):
+class CartView(TemplateView):
     template_name = "cart.html"
 
     def get_context_data(self, **kwargs):
@@ -266,7 +269,7 @@ class CartView(LoginRequiredForActionMixin, TemplateView):
         return context
 
 
-class AddToCartView(LoginRequiredForActionMixin, View):
+class AddToCartView(View):
     http_method_names = ["post"]
 
     def post(self, request, *args, **kwargs):
@@ -283,13 +286,7 @@ class AddToCartView(LoginRequiredForActionMixin, View):
             return redirect("store:cart")
         data = form.cleaned_data
         product = get_object_or_404(Product, pk=data["product_id"])
-        # if ProductVariant.objects.filter(product=product, color__isnull=False).exclude(color="").exists():
-        #     if not data.get("color"):
-        #         messages.error(request, "Please select a color.")
-        #         if is_ajax:
-        #             return JsonResponse({"success": False, "error": "Please select a color."}, status=400)
-        #         return redirect("store:product_detail", slug=product.slug)
-        book_format =  BookFormat.objects.filter(
+        book_format = BookFormat.objects.filter(
             product=product,
             format_type=data["format_type"],
             is_active=True,
@@ -302,7 +299,7 @@ class AddToCartView(LoginRequiredForActionMixin, View):
         cart = CartService.get_or_create_cart(request)
         try:
             CartService.add_item(cart, book_format, data["quantity"])
-        except StockError as exc:
+        except (StockError, CartError) as exc:
             messages.error(request, str(exc))
             if is_ajax:
                 return JsonResponse({"success": False, "error": str(exc)}, status=400)
@@ -319,7 +316,7 @@ class AddToCartView(LoginRequiredForActionMixin, View):
         return redirect("store:cart")
 
 
-class UpdateCartItemView(LoginRequiredForActionMixin, View):
+class UpdateCartItemView(View):
     http_method_names = ["post"]
 
     def post(self, request, *args, **kwargs):
@@ -336,7 +333,7 @@ class UpdateCartItemView(LoginRequiredForActionMixin, View):
         return redirect("store:cart")
 
 
-class RemoveCartItemView(LoginRequiredForActionMixin, View):
+class RemoveCartItemView(View):
     http_method_names = ["post"]
 
     def post(self, request, *args, **kwargs):
@@ -347,108 +344,88 @@ class RemoveCartItemView(LoginRequiredForActionMixin, View):
         return redirect("store:cart")
 
 
-class CheckoutView(LoginRequiredForActionMixin, TemplateView):
+class CheckoutView(TemplateView):
     template_name = "checkout.html"
 
     def dispatch(self, request, *args, **kwargs):
-        # Check authentication first
-        if not request.user.is_authenticated:
-            next_url = request.get_full_path()
-            login_url = f"{reverse('auth:login')}?next={next_url}"
-            return redirect(login_url)
-        
         cart = CartService.get_or_create_cart(request)
         if not cart.items.exists():
             messages.info(request, "Your cart is empty.")
             return redirect("store:cart")
-        
-        # Check for inactive products
         inactive_items = cart.items.filter(product__is_active=False)
         if inactive_items.exists():
             inactive_items.delete()
             messages.error(
-                request, 
+                request,
                 "Some items are no longer available and have been removed. Please review your cart."
             )
             return redirect("store:cart")
-        
         return super().dispatch(request, *args, **kwargs)
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         cart = CartService.get_or_create_cart(self.request)
         totals = CartService.compute_totals(cart)
-        
-        # Get user's saved addresses
-        from .models import Address
-        addresses = Address.objects.filter(
-            user=self.request.user,
-            is_snapshot=False
-        ).order_by('-is_default', '-created_at')
-        
-        # Get default address
-        default_address = addresses.filter(is_default=True).first()
-        
-        # Prepare initial form data
+        addresses = []
+        default_address = None
+        if self.request.user.is_authenticated:
+            from .models import Address
+            addresses = list(
+                Address.objects.filter(
+                    user=self.request.user,
+                    is_snapshot=False
+                ).order_by('-is_default', '-created_at')
+            )
+            default_address = next((a for a in addresses if a.is_default), addresses[0] if addresses else None)
         payment_method = self.request.GET.get("payment")
         if payment_method not in {"cod", "whatsapp"}:
             payment_method = None
-        
         initial = {"payment": payment_method} if payment_method else {}
-        
-        # If default address exists, pre-select it
         if default_address:
-            initial['selected_address'] = default_address.id
-        
-        context.update(
-            {
-                "cart": cart,
-                "items": cart.items.select_related("product", "variant").prefetch_related("product__images"),
-                "totals": totals,
-                "form": CheckoutForm(initial=initial, user=self.request.user),
-                "addresses": addresses,
-                "default_address": default_address,
-                "active_page": "cart",
-            }
-        )
+            initial["selected_address"] = default_address.id
+        context.update({
+            "cart": cart,
+            "items": cart.items.select_related("product", "variant").prefetch_related("product__images"),
+            "totals": totals,
+            "form": CheckoutForm(initial=initial, user=self.request.user if self.request.user.is_authenticated else None),
+            "addresses": addresses,
+            "default_address": default_address,
+            "active_page": "cart",
+        })
         return context
 
 
-class OrderCreateView(LoginRequiredForActionMixin, FormView):
+class OrderCreateView(FormView):
     form_class = CheckoutForm
     template_name = "checkout.html"
 
     def dispatch(self, request, *args, **kwargs):
-        # Check authentication first
-        if not request.user.is_authenticated:
-            next_url = reverse('store:checkout')
-            login_url = f"{reverse('auth:login')}?next={next_url}"
-            return redirect(login_url)
-        
         cart = CartService.get_or_create_cart(request)
         if not cart.items.exists():
             messages.info(request, "Your cart is empty.")
             return redirect("store:cart")
         return super().dispatch(request, *args, **kwargs)
-    
+
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
-        kwargs['user'] = self.request.user
+        kwargs["user"] = self.request.user if self.request.user.is_authenticated else None
         return kwargs
-    
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         cart = CartService.get_or_create_cart(self.request)
         totals = CartService.compute_totals(cart)
-        
-        # Get user's saved addresses
-        from .models import Address
-        addresses = Address.objects.filter(
-            user=self.request.user,
-            is_snapshot=False
-        ).order_by('-is_default', '-created_at')
-        
-        default_address = addresses.filter(is_default=True).first()
-        
+        addresses = []
+        default_address = None
+        if self.request.user.is_authenticated:
+            from .models import Address
+            addresses = list(
+                Address.objects.filter(
+                    user=self.request.user,
+                    is_snapshot=False
+                ).order_by('-is_default', '-created_at')
+            )
+            default_address = next((a for a in addresses if a.is_default), addresses[0] if addresses else None)
         context.update({
             "cart": cart,
             "items": cart.items.select_related("product", "variant").prefetch_related("product__images"),
@@ -461,19 +438,17 @@ class OrderCreateView(LoginRequiredForActionMixin, FormView):
 
     def form_valid(self, form):
         cart = CartService.get_or_create_cart(self.request)
+        user = self.request.user if self.request.user.is_authenticated else None
         try:
-            order = OrderService.create_order(cart, form.cleaned_data, self.request.user)
+            order = OrderService.create_order(cart, form.cleaned_data, user)
         except (CartError, StockError) as exc:
             messages.error(self.request, str(exc))
             return redirect("store:checkout")
         self.request.session["last_order_number"] = order.order_number
-        
         payment_method = form.cleaned_data.get("payment")
-        
         if payment_method == "razorpay":
-            # Redirect to payment page for Razorpay
             return redirect("store:razorpay_payment", order_number=order.order_number)
-        elif payment_method == "whatsapp":
+        if payment_method == "whatsapp":
             messages.info(self.request, "We will contact you on WhatsApp to confirm your order.")
         return redirect("store:order_success", order_number=order.order_number)
 
@@ -516,7 +491,7 @@ class OrderHistoryView(LoginRequiredMixin, ListView):
     def get_queryset(self):
         return (
             Order.objects.filter(user=self.request.user)
-            .select_related("address")
+            .select_related("address", "payment")
             .prefetch_related("items")
         )
 
@@ -561,7 +536,14 @@ class NewsletterSubscribeView(FormView):
 
     def form_valid(self, form):
         email = form.cleaned_data["email"].lower()
-        subscription, created = form._meta.model.objects.get_or_create(email=email)
+        try:
+            subscription, created = form._meta.model.objects.get_or_create(email=email)
+        except IntegrityError:
+            subscription = form._meta.model.objects.filter(email=email).first()
+            created = False
+            if not subscription:
+                messages.error(self.request, "Could not complete subscription. Please try again.")
+                return redirect(self.get_success_url())
         if not created and not subscription.is_active:
             subscription.is_active = True
             subscription.save(update_fields=["is_active"])
@@ -572,26 +554,27 @@ class NewsletterSubscribeView(FormView):
         messages.error(self.request, "Please enter a valid email.")
         return redirect(self.get_success_url())
 
-class RazorpayPaymentView(LoginRequiredForActionMixin, View):
-    """Handle Razorpay payment initialization"""
-    
+def _can_access_order(request, order):
+    """Allow access if order belongs to user or guest session matches."""
+    if order.user is None:
+        return request.session.get("last_order_number") == order.order_number
+    return request.user.is_authenticated and order.user == request.user
+
+
+class RazorpayPaymentView(View):
+    """Handle Razorpay payment initialization. Supports guest (session last_order_number)."""
+
     def post(self, request, *args, **kwargs):
         try:
-            import logging
-            logger = logging.getLogger(__name__)
-            
             order_number = request.POST.get('order_number')
-            logger.info(f"POST request for order: {order_number}")
-            
+            if not order_number or not str(order_number).strip():
+                return JsonResponse({'status': 'error', 'message': 'Order number required'}, status=400)
+            order_number = str(order_number).strip()
+            logger.info("POST request for order: %s", order_number)
             order = Order.objects.select_related('address', 'user').get(order_number=order_number)
-            logger.info(f"Order found: {order.order_number}, User: {order.user}")
-            
-            # Check authorization
-            if order.user != request.user:
-                logger.warning(f"Unauthorized access attempt for order {order_number}")
+            if not _can_access_order(request, order):
+                logger.warning("Unauthorized access attempt for order %s", order_number)
                 return JsonResponse({'status': 'error', 'message': 'Unauthorized'}, status=403)
-            
-            # Get or create payment
             payment, created = Payment.objects.get_or_create(
                 order=order,
                 defaults={
@@ -600,21 +583,15 @@ class RazorpayPaymentView(LoginRequiredForActionMixin, View):
                     'status': Payment.Status.PENDING
                 }
             )
-            
-            # Initialize Razorpay client
             client = razorpay.Client(auth=(settings.RZP_CLIENT_ID, settings.RZP_CLIENT_SECRET))
-            
-            # Create Razorpay order
             razorpay_order = client.order.create({
-                'amount': int(order.total * 100), 
+                'amount': int(order.total * 100),
                 'currency': 'INR',
-                'payment_capture': 1 
+                'payment_capture': 1
             })
-            
-            # Store Razorpay order ID
             payment.razorpay_order_id = razorpay_order['id']
             payment.save(update_fields=['razorpay_order_id'])
-            
+            customer_email = order.address.email or (getattr(request.user, 'email', '') or '')
             return JsonResponse({
                 'status': 'success',
                 'razorpay_order_id': razorpay_order['id'],
@@ -622,111 +599,104 @@ class RazorpayPaymentView(LoginRequiredForActionMixin, View):
                 'amount': int(order.total * 100),
                 'order_number': order.order_number,
                 'customer_name': order.address.full_name,
-                'customer_email': order.address.email or request.user.email,
+                'customer_email': customer_email,
                 'customer_phone': order.address.phone,
             })
         except Order.DoesNotExist:
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.error(f"Order not found: {order_number}")
+            logger.error("Order not found: %s", order_number or "(missing)")
             return JsonResponse({'status': 'error', 'message': 'Order not found'}, status=404)
         except Exception as e:
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.error(f"Payment initialization error: {str(e)}", exc_info=True)
+            logger.error("Payment initialization error: %s", e, exc_info=True)
             return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
-    
+
     def get(self, request, *args, **kwargs):
-        """Display payment page"""
         try:
             order_number = kwargs.get('order_number')
             order = Order.objects.select_related('address', 'user').get(order_number=order_number)
-            
-            # Check authorization
-            if order.user != request.user:
+            if not _can_access_order(request, order):
                 return HttpResponseForbidden()
-            
-            context = {
-                'order': order,
-                'razorpay_key_id': settings.RZP_CLIENT_ID,
-            }
+            context = {'order': order, 'razorpay_key_id': settings.RZP_CLIENT_ID}
             return self.render_to_response(context)
         except Order.DoesNotExist:
             return redirect('store:checkout')
-    
+
     def render_to_response(self, context):
         from django.shortcuts import render
         return render(self.request, 'razorpay_payment.html', context)
 
 
 
-class RazorpayPaymentVerifyView(LoginRequiredForActionMixin, View):
-    """Verify Razorpay payment signature"""
-    
+class RazorpayPaymentVerifyView(View):
+    """Verify Razorpay payment signature. Works for guest and authenticated (no user check)."""
+
     def post(self, request, *args, **kwargs):
         try:
-            import logging
-            logger = logging.getLogger(__name__)
-            
-            data = json.loads(request.body)
-            
-            razorpay_order_id = data.get('razorpay_order_id')
-            razorpay_payment_id = data.get('razorpay_payment_id')
-            razorpay_signature = data.get('razorpay_signature')
-            
-            logger.info(f"Payment verification attempt - Order: {razorpay_order_id}, Payment: {razorpay_payment_id}")
-            
+            if not request.body:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'Request body required',
+                }, status=400)
+            try:
+                data = json.loads(request.body)
+            except json.JSONDecodeError:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'Invalid JSON',
+                }, status=400)
+            razorpay_order_id = data.get('razorpay_order_id') or ''
+            razorpay_payment_id = data.get('razorpay_payment_id') or ''
+            razorpay_signature = data.get('razorpay_signature') or ''
+            if not razorpay_order_id or not razorpay_payment_id or not razorpay_signature:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'Missing payment verification data',
+                }, status=400)
+            logger.info(
+                "Payment verification attempt - Order: %s, Payment: %s",
+                razorpay_order_id, razorpay_payment_id
+            )
             payment = Payment.objects.select_related('order').get(
                 razorpay_order_id=razorpay_order_id
             )
-            
-            # Verify signature
             signature_data = f"{razorpay_order_id}|{razorpay_payment_id}"
             signature_check = hmac.new(
                 settings.RZP_CLIENT_SECRET.encode(),
                 signature_data.encode(),
                 hashlib.sha256
             ).hexdigest()
-            
-            logger.debug(f"Signature verification - Expected: {signature_check}, Received: {razorpay_signature}")
-            
             if signature_check == razorpay_signature:
-                # Payment successful - update all payment fields
-                payment.razorpay_payment_id = razorpay_payment_id
-                payment.razorpay_signature = razorpay_signature
-                payment.status = Payment.Status.PAID
-                payment.processed_at = timezone.now()
-                payment.save(update_fields=['status', 'processed_at', 'razorpay_payment_id', 'razorpay_signature'])
-                
-                logger.info(f"Payment successful - Order: {payment.order.order_number}, Payment: {razorpay_payment_id}, Status: PAID")
-                
+                if payment.status != Payment.Status.PAID:
+                    payment.razorpay_payment_id = razorpay_payment_id
+                    payment.razorpay_signature = razorpay_signature
+                    payment.status = Payment.Status.PAID
+                    payment.processed_at = timezone.now()
+                    payment.save(update_fields=[
+                        'status', 'processed_at', 'razorpay_payment_id', 'razorpay_signature'
+                    ])
+                    logger.info(
+                        "Payment successful - Order: %s, Payment: %s",
+                        payment.order.order_number, razorpay_payment_id
+                    )
                 return JsonResponse({
                     'status': 'success',
                     'message': 'Payment verified successfully',
                     'order_number': payment.order.order_number
                 })
-            else:
-                payment.status = Payment.Status.FAILED
-                payment.save(update_fields=['status'])
-                
-                logger.warning(f"Signature mismatch for order {razorpay_order_id}")
-                
-                return JsonResponse({
-                    'status': 'error',
-                    'message': 'Payment signature verification failed'
-                }, status=400)
+            payment.status = Payment.Status.FAILED
+            payment.save(update_fields=['status'])
+            logger.warning("Signature mismatch for order %s", razorpay_order_id)
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Payment signature verification failed'
+            }, status=400)
         except Payment.DoesNotExist:
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.error(f"Payment record not found for order: {razorpay_order_id}")
+            logger.error("Payment record not found for order: %s", razorpay_order_id)
             return JsonResponse({
                 'status': 'error',
                 'message': 'Payment record not found'
             }, status=404)
         except Exception as e:
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.error(f"Payment verification error: {str(e)}", exc_info=True)
+            logger.error("Payment verification error: %s", e, exc_info=True)
             return JsonResponse({
                 'status': 'error',
                 'message': f'Payment verification error: {str(e)}'
@@ -829,22 +799,11 @@ class ProductReviewCreateView(LoginRequiredForActionMixin, View):
         return redirect("store:product_detail", slug=product.slug)
     
 class WishlistToggleView(View):
-    """POST: toggle product in wishlist. Login required. Returns JSON."""
+    """POST: toggle product in wishlist. Works for guest (session) and authenticated user."""
 
     def post(self, request):
         is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest"
 
-        if not request.user.is_authenticated:
-            next_url = request.GET.get("next") or request.build_absolute_uri()
-            login_url = f"{reverse('auth:login')}?next={next_url}"
-            if is_ajax:
-                return JsonResponse(
-                    {"success": False, "login_required": True, "login_url": login_url},
-                    status=403,
-                )
-            return redirect(login_url)
-
-        # Parse product_id from JSON or POST
         product_id = None
         if request.content_type and "application/json" in request.content_type:
             try:
@@ -864,58 +823,84 @@ class WishlistToggleView(View):
         if not product:
             return JsonResponse({"success": False, "error": "Product not found"}, status=404)
 
-        wishlist, created = Wishlist.objects.get_or_create(
-            user=request.user,
-            product=product,
-        )
-        if not created:
-            wishlist.delete()
-            added = False
+        if request.user.is_authenticated:
+            wishlist, created = Wishlist.objects.get_or_create(
+                user=request.user,
+                product=product,
+            )
+            if not created:
+                wishlist.delete()
+                added = False
+            else:
+                added = True
+            count = Wishlist.objects.filter(user=request.user).count()
         else:
-            added = True
+            ids = WishlistService.get_guest_ids(request.session)
+            if product_id in ids:
+                ids = [x for x in ids if x != product_id]
+                added = False
+            else:
+                if len(ids) >= WishlistService.WISHLIST_MAX_ITEMS:
+                    return JsonResponse(
+                        {"success": False, "error": "Wishlist limit reached (max 50)."},
+                        status=400,
+                    )
+                ids = ids + [product_id]
+                added = True
+            WishlistService.set_guest_ids(request.session, ids)
+            count = len(ids)
 
-        count = Wishlist.objects.filter(user=request.user).count()
         return JsonResponse({"success": True, "added": added, "count": count})
 
 
 class WishlistIdsView(View):
-    """GET: return wishlist product IDs for marking hearts on product cards."""
+    """GET: return wishlist product IDs for marking hearts on product cards. Guest = session."""
 
     def get(self, request):
-        if not request.user.is_authenticated:
-            return JsonResponse({"product_ids": []})
         try:
-            product_ids = list(
-                Wishlist.objects.filter(user=request.user)
-                .filter(product__is_active=True)
-                .values_list("product_id", flat=True)
-            )
+            if request.user.is_authenticated:
+                product_ids = list(
+                    Wishlist.objects.filter(user=request.user)
+                    .filter(product__is_active=True)
+                    .values_list("product_id", flat=True)
+                )
+            else:
+                product_ids = WishlistService.get_guest_ids(request.session)
             return JsonResponse({"product_ids": product_ids})
         except Exception as e:
             logger.exception("WishlistIdsView: %s", e)
             return JsonResponse({"product_ids": []})
 
 
-class WishlistPageView(LoginRequiredForActionMixin, TemplateView):
-    """Wishlist page: all saved books for this user."""
+class WishlistPageView(TemplateView):
+    """Wishlist page: saved books. Authenticated = DB; guest = session product IDs."""
 
     template_name = "wishlist.html"
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        if not self.request.user.is_authenticated:
-            context["wishlist_products"] = []
-            return context
-
-        wishlist_items = (
-            Wishlist.objects.filter(
-                user=self.request.user,
-                product__is_active=True,
+        if self.request.user.is_authenticated:
+            wishlist_items = (
+                Wishlist.objects.filter(
+                    user=self.request.user,
+                    product__is_active=True,
+                )
+                .select_related("product", "product__category")
+                .prefetch_related("product__images", "product__formats")
+                .order_by("-created_at")
             )
-            .select_related("product", "product__category")
-            .prefetch_related("product__images", "product__formats")
-            .order_by("-created_at")
-        )
-        context["wishlist_products"] = [item.product for item in wishlist_items]
+            context["wishlist_products"] = [item.product for item in wishlist_items]
+        else:
+            ids = WishlistService.get_guest_ids(self.request.session)
+            if not ids:
+                context["wishlist_products"] = []
+            else:
+                context["wishlist_products"] = list(
+                    Product.objects.active()
+                    .filter(pk__in=ids)
+                    .select_related("category")
+                    .prefetch_related("images", "formats")
+                    .order_by("-created_at")
+                )
         context["active_page"] = "wishlist"
         return context
