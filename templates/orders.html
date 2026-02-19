@@ -264,9 +264,15 @@
                                     📦 {{ order.get_status_display }}
                                 </span>
                                 {% if order.payment %}
-                                <span class="payment-status status-{{ order.payment.status }}">
-                                    💳 Payment: {{ order.payment.get_status_display }}
-                                </span>
+                                    {% if order.payment.status == 'paid' or order.status == 'delivered' and order.payment.method != 'razorpay' %}
+                                        <span class="payment-status status-paid">
+                                            💳 Payment: Paid
+                                        </span>
+                                    {% else %}
+                                        <span class="payment-status status-{{ order.payment.status }}">
+                                            💳 Payment: {{ order.payment.get_status_display }}
+                                        </span>
+                                    {% endif %}
                                 {% endif %}
                             </div>
                             

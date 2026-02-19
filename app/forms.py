@@ -1,7 +1,7 @@
 from django import forms
 from django.core.validators import EmailValidator, RegexValidator
 from django.contrib.auth.models import User
-
+import re
 from .models import Address, ContactMessage, NewsletterSubscription
 
 
@@ -45,7 +45,19 @@ class CheckoutForm(forms.Form):
                 continue
             existing = field.widget.attrs.get("class", "")
             field.widget.attrs["class"] = f"{existing} form-input".strip()
-    
+
+    def clean_phone(self):
+        phone = self.cleaned_data.get('phone', '').strip()
+        if phone and not re.match(r'^\+?[\d\s\-]{7,15}$', phone):
+            raise forms.ValidationError('Enter a valid phone number.')
+        return phone
+
+    def clean_pincode(self):
+        pincode = self.cleaned_data.get('pincode', '').strip()
+        if pincode and not re.match(r'^\d{6}$', pincode):
+            raise forms.ValidationError('Enter a valid 6-digit PIN code.')
+        return pincode
+
     def clean(self):
         cleaned_data = super().clean()
         selected_address = cleaned_data.get('selected_address')
@@ -93,7 +105,6 @@ class CheckoutForm(forms.Form):
                         self.add_error(field, 'This field is required.')
 
         return cleaned_data
-
 
 class ContactForm(forms.ModelForm):
     class Meta:

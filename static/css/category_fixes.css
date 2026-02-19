@@ -238,7 +238,7 @@
     text-shadow: 0 1px 2px rgba(0,0,0,0.2) !important;
     box-shadow: 0 1px 4px rgba(76, 175, 80, 0.25) !important;
     letter-spacing: 0.2px !important;
-    margin-left: auto !important;
+    /* margin-left: auto !important; */
 }
 
 /* Compact action button - PROFESSIONAL */

@@ -53,7 +53,7 @@
                 <div>
                     <div style="font-size: 0.875rem; color: var(--gray-600); margin-bottom: 0.25rem;">Payment Status</div>
                     <div>
-                        {% if order.payment.status == 'paid' %}
+                        {% if order.payment.status == 'paid' or order.status == 'delivered' and order.payment.method in 'cod,whatsapp' %}
                             <span class="badge badge-success">Paid</span>
                         {% elif order.payment.status == 'pending' %}
                             <span class="badge badge-warning">Pending</span>
