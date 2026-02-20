@@ -55,7 +55,14 @@ class ProductListView(ListView):
                 | Q(description__icontains=query)
                 | Q(category__name__icontains=query)
             )
-        
+
+        sort = self.request.GET.get("sort", "").strip().lower()
+        if sort == "popular":
+            qs = qs.annotate(order_count=Count("order_items")).order_by("-order_count", "-created_at")
+        else:
+            # default: newest (recently launched)
+            qs = qs.order_by("-created_at")
+
         return qs.distinct().prefetch_related("images")
 
     def get_context_data(self, **kwargs):
@@ -68,13 +75,19 @@ class ProductListView(ListView):
             category = Category.objects.filter(slug=category_slug).first()
             if category:
                 context["page_title"] = category.name
+        sort = self.request.GET.get("sort", "").strip().lower()
         context["filters"] = {
             "category": self.request.GET.get("category", "all"),
             "min_price": self.request.GET.get("min_price", ""),
             "max_price": self.request.GET.get("max_price", ""),
             "format_type": self.request.GET.get("format_type", ""),
             "q": self.request.GET.get("q", ""),
+            "sort": sort or "newest",
         }
+        if sort == "popular":
+            context["page_title"] = "Most Popular"
+        elif sort == "newest":
+            context["page_title"] = "Recently Launched"
         context["format_options"] = [
             ("hardcover", "Hardcover"),
             ("paperback", "Paperback"),
@@ -125,6 +138,70 @@ class HomeView(TemplateView):
                 Prefetch("formats", queryset=format_qs)
             )[:8]
         )
+
+        # Recently Launched — 20 newest products
+        context["recently_launched_products"] = (
+            Product.objects.active()
+            .select_related("category")
+            .prefetch_related(
+                Prefetch("images", queryset=image_qs),
+                Prefetch("formats", queryset=format_qs),
+            )
+            .order_by("-created_at")[:20]
+        )
+
+        # Most Popular — 20 products by order count
+        context["most_popular_products"] = (
+            Product.objects.active()
+            .annotate(order_count=Count("order_items"))
+            .select_related("category")
+            .prefetch_related(
+                Prefetch("images", queryset=image_qs),
+                Prefetch("formats", queryset=format_qs),
+            )
+            .order_by("-order_count", "-created_at")[:20]
+        )
+
+        # You may like — same category as cart + wishlist, exclude already in cart/wishlist
+        exclude_ids = set()
+        category_ids = set()
+        try:
+            cart = CartService.get_or_create_cart(self.request)
+            for item in cart.items.select_related("product").all():
+                if item.product_id:
+                    exclude_ids.add(item.product_id)
+                    if item.product.category_id:
+                        category_ids.add(item.product.category_id)
+        except Exception:
+            pass
+        if self.request.user.is_authenticated:
+            for w in Wishlist.objects.filter(user=self.request.user).select_related("product").all():
+                if w.product_id:
+                    exclude_ids.add(w.product_id)
+                    if w.product.category_id:
+                        category_ids.add(w.product.category_id)
+        else:
+            guest_wishlist_ids = WishlistService.get_guest_ids(self.request.session)
+            if guest_wishlist_ids:
+                cats = Product.objects.filter(pk__in=guest_wishlist_ids).values_list("category_id", flat=True)
+                category_ids.update(c for c in cats if c is not None)
+                exclude_ids.update(guest_wishlist_ids)
+        if not category_ids:
+            you_may_like_qs = Product.objects.active().none()
+        else:
+            you_may_like_qs = Product.objects.active().filter(category_id__in=category_ids)
+            if exclude_ids:
+                you_may_like_qs = you_may_like_qs.exclude(pk__in=exclude_ids)
+        context["you_may_like_products"] = (
+            you_may_like_qs
+            .select_related("category")
+            .prefetch_related(
+                Prefetch("images", queryset=image_qs),
+                Prefetch("formats", queryset=format_qs),
+            )
+            .order_by("-created_at")[:20]
+        )
+
         context["active_page"] = "home"
         return context
 
@@ -335,8 +412,6 @@ class AddToCartView(View):
         action = request.POST.get("action", "add")
         if action == "buy":
             return redirect("store:checkout")
-        if action == "whatsapp":
-            return redirect(f"{reverse_lazy('store:checkout')}?payment=whatsapp")
         return redirect("store:cart")
 
 
@@ -364,7 +439,24 @@ class RemoveCartItemView(View):
         cart = CartService.get_or_create_cart(request)
         item = get_object_or_404(CartItem, pk=kwargs.get("item_id"), cart=cart)
         item.delete()
+        is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest"
+        if is_ajax:
+            totals = CartService.compute_totals(cart)
+            remaining = cart.items.count()
+            return JsonResponse({
+                "success": True,
+                "cart_count": remaining,
+                "empty_cart": remaining == 0,
+                "totals": {
+                    "subtotal": totals.subtotal,
+                    "shipping": totals.shipping,
+                    "total": totals.total,
+                },
+            })
         messages.success(request, "Item removed.")
+        next_name = request.GET.get("next", "store:cart")
+        if next_name == "store:checkout":
+            return redirect("store:checkout")
         return redirect("store:cart")
 
 
@@ -402,7 +494,7 @@ class CheckoutView(TemplateView):
             )
             default_address = next((a for a in addresses if a.is_default), addresses[0] if addresses else None)
         payment_method = self.request.GET.get("payment")
-        if payment_method not in {"cod", "whatsapp"}:
+        if payment_method not in {"cod", "razorpay"}:
             payment_method = None
         initial = {"payment": payment_method} if payment_method else {}
         if default_address:
@@ -472,8 +564,6 @@ class OrderCreateView(FormView):
         payment_method = form.cleaned_data.get("payment")
         if payment_method == "razorpay":
             return redirect("store:razorpay_payment", order_number=order.order_number)
-        if payment_method == "whatsapp":
-            messages.info(self.request, "We will contact you on WhatsApp to confirm your order.")
         return redirect("store:order_success", order_number=order.order_number)
 
     def form_invalid(self, form):

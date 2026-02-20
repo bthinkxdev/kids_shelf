@@ -3,6 +3,7 @@
 {% block title %}Kids Shelf - Preloved imported books for kids {% endblock %}
 {% block meta_description %}New/Preloved imported books for kids aged 6 months to 10 years{% endblock %}
 {% block content %}
+    <div class="hero-stage">
     <section class="banner-section">
         <div class="banner-slider" id="bannerSlider">
             <div class="banner-slide active">
@@ -36,6 +37,7 @@
             </div>
         </div>
     </section>
+    </div><!-- /.hero-stage -->
 
     <section class="section section-categories" id="categories">
         <div class="container">
@@ -263,6 +265,186 @@
         </div>
     </section>
 
+    <!-- Recently Launched -->
+    <section class="section section-recently-launched">
+        <div class="container">
+            <div class="section-header section-header-with-cta">
+                <div>
+                    <h2 class="section-title">Recently Launched</h2>
+                    <p class="section-subtitle">Fresh picks just for you</p>
+                </div>
+                <a href="{% url 'store:product_list' %}?sort=newest" class="btn btn-secondary">View All</a>
+            </div>
+            <div class="featured-products-grid">
+                {% for product in recently_launched_products %}
+                    <div class="featured-product-card">
+                        <a href="{% url 'store:product_detail' product.slug %}" class="featured-product-link">
+                            <div class="featured-product-image">
+                                {% if product.discount_percent %}
+                                    <span class="featured-product-badge">{{ product.discount_percent }}% OFF</span>
+                                {% endif %}
+                                {% with image=product.images.first %}
+                                    {% if image %}
+                                        <img src="{{ image.image.url }}" alt="{{ product.name }}" loading="lazy">
+                                    {% else %}
+                                        <img src="{% static 'images/banner.png' %}" alt="{{ product.name }}" loading="lazy">
+                                    {% endif %}
+                                {% endwith %}
+                            </div>
+                            <div class="featured-product-info">
+                                <div class="featured-product-category">{{ product.category.name }}</div>
+                                <h3 class="">{{ product.name }}</h3>
+                                {% with variant=product.variants.first %}
+                                    {% if variant %}
+                                        <div class="featured-product-name" style="font-size: 0.75em; color: #666; margin-top: 0; margin-bottom: 2px; line-height: 1.2;">
+                                           Color: {{ variant.color|default:'N/A' }}, Size: {{ variant.size|default:'N/A' }}
+                                        </div>
+                                    {% endif %}
+                                {% endwith %}
+                                <div class="featured-product-price">
+                                    {% if product.original_price and product.original_price > product.price %}
+                                        <span class="original-price">₹{{ product.original_price }}</span>
+                                        <span class="current-price">₹{{ product.price }}</span>
+                                    {% else %}
+                                        <span class="current-price">₹{{ product.price }}</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </a>
+                        <button class="featured-add-to-cart" onclick="location.href='{% url 'store:product_detail' product.slug %}'">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M12 5v14M5 12h14"/>
+                            </svg>
+                            View Details
+                        </button>
+                    </div>
+                {% empty %}
+                    <p class="section-empty">No recent launches yet. Check back soon!</p>
+                {% endfor %}
+            </div>
+        </div>
+    </section>
+
+    <!-- Most Popular -->
+    <section class="section section-most-popular">
+        <div class="container">
+            <div class="section-header section-header-with-cta">
+                <div>
+                    <h2 class="section-title">Most Popular</h2>
+                    <p class="section-subtitle">Customer favorites</p>
+                </div>
+                <a href="{% url 'store:product_list' %}?sort=popular" class="btn btn-secondary">View All</a>
+            </div>
+            <div class="featured-products-grid">
+                {% for product in most_popular_products %}
+                    <div class="featured-product-card">
+                        <a href="{% url 'store:product_detail' product.slug %}" class="featured-product-link">
+                            <div class="featured-product-image">
+                                {% if product.discount_percent %}
+                                    <span class="featured-product-badge">{{ product.discount_percent }}% OFF</span>
+                                {% endif %}
+                                {% with image=product.images.first %}
+                                    {% if image %}
+                                        <img src="{{ image.image.url }}" alt="{{ product.name }}" loading="lazy">
+                                    {% else %}
+                                        <img src="{% static 'images/banner.png' %}" alt="{{ product.name }}" loading="lazy">
+                                    {% endif %}
+                                {% endwith %}
+                            </div>
+                            <div class="featured-product-info">
+                                <div class="featured-product-category">{{ product.category.name }}</div>
+                                <h3 class="">{{ product.name }}</h3>
+                                {% with variant=product.variants.first %}
+                                    {% if variant %}
+                                        <div class="featured-product-name" style="font-size: 0.75em; color: #666; margin-top: 0; margin-bottom: 2px; line-height: 1.2;">
+                                           Color: {{ variant.color|default:'N/A' }}, Size: {{ variant.size|default:'N/A' }}
+                                        </div>
+                                    {% endif %}
+                                {% endwith %}
+                                <div class="featured-product-price">
+                                    {% if product.original_price and product.original_price > product.price %}
+                                        <span class="original-price">₹{{ product.original_price }}</span>
+                                        <span class="current-price">₹{{ product.price }}</span>
+                                    {% else %}
+                                        <span class="current-price">₹{{ product.price }}</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </a>
+                        <button class="featured-add-to-cart" onclick="location.href='{% url 'store:product_detail' product.slug %}'">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M12 5v14M5 12h14"/>
+                            </svg>
+                            View Details
+                        </button>
+                    </div>
+                {% empty %}
+                    <p class="section-empty">No popular products yet.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </section>
+
+    <!-- You may like -->
+    <section class="section section-you-may-like">
+        <div class="container">
+            <div class="section-header section-header-with-cta">
+                <div>
+                    <h2 class="section-title">You May Like</h2>
+                    <p class="section-subtitle">Based on your wishlist and cart</p>
+                </div>
+                <a href="{% url 'store:product_list' %}" class="btn btn-secondary">View All</a>
+            </div>
+            <div class="featured-products-grid">
+                {% for product in you_may_like_products %}
+                    <div class="featured-product-card">
+                        <a href="{% url 'store:product_detail' product.slug %}" class="featured-product-link">
+                            <div class="featured-product-image">
+                                {% if product.discount_percent %}
+                                    <span class="featured-product-badge">{{ product.discount_percent }}% OFF</span>
+                                {% endif %}
+                                {% with image=product.images.first %}
+                                    {% if image %}
+                                        <img src="{{ image.image.url }}" alt="{{ product.name }}" loading="lazy">
+                                    {% else %}
+                                        <img src="{% static 'images/banner.png' %}" alt="{{ product.name }}" loading="lazy">
+                                    {% endif %}
+                                {% endwith %}
+                            </div>
+                            <div class="featured-product-info">
+                                <div class="featured-product-category">{{ product.category.name }}</div>
+                                <h3 class="">{{ product.name }}</h3>
+                                {% with variant=product.variants.first %}
+                                    {% if variant %}
+                                        <div class="featured-product-name" style="font-size: 0.75em; color: #666; margin-top: 0; margin-bottom: 2px; line-height: 1.2;">
+                                           Color: {{ variant.color|default:'N/A' }}, Size: {{ variant.size|default:'N/A' }}
+                                        </div>
+                                    {% endif %}
+                                {% endwith %}
+                                <div class="featured-product-price">
+                                    {% if product.original_price and product.original_price > product.price %}
+                                        <span class="original-price">₹{{ product.original_price }}</span>
+                                        <span class="current-price">₹{{ product.price }}</span>
+                                    {% else %}
+                                        <span class="current-price">₹{{ product.price }}</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </a>
+                        <button class="featured-add-to-cart" onclick="location.href='{% url 'store:product_detail' product.slug %}'">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M12 5v14M5 12h14"/>
+                            </svg>
+                            View Details
+                        </button>
+                    </div>
+                {% empty %}
+                    <p class="section-empty">Add items to your cart or wishlist to see recommendations here.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </section>
+
     <!-- Customer Stories Section -->
     {% comment %} <section class="section section-stories">
         <div class="container">
@@ -440,4 +622,176 @@
         </div>
     </section>
 
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    /* ── 1. WORD-WAVE: wrap text words in .hero-title with animated spans ── */
+    var title = document.querySelector('.hero-title');
+    if (title) {
+        var wIdx = 0;
+        Array.from(title.childNodes).forEach(function (node) {
+            if (node.nodeType !== 3) { if (node.tagName !== 'BR') wIdx++; return; }
+            var words = node.textContent.split(/(\s+)/);
+            var frag = document.createDocumentFragment();
+            words.forEach(function (w) {
+                if (/^\s+$/.test(w)) { frag.appendChild(document.createTextNode(w)); return; }
+                if (!w.length) return;
+                var s = document.createElement('span');
+                s.className = 'hero-word';
+                s.style.setProperty('--i', wIdx++);
+                s.textContent = w;
+                frag.appendChild(s);
+            });
+            node.parentNode.replaceChild(frag, node);
+        });
+    }
+
+    /* ── 2. CANVAS PARTICLE SYSTEM — spans banner + hero text ── */
+    var stage = document.querySelector('.hero-stage');
+    if (!stage) return;
+
+    var canvas = document.createElement('canvas');
+    canvas.className = 'hero-canvas';
+    stage.prepend(canvas);
+
+    var ctx = canvas.getContext('2d');
+
+    function resize() {
+        canvas.width  = stage.offsetWidth;
+        canvas.height = stage.offsetHeight;
+    }
+    resize();
+    window.addEventListener('resize', resize);
+
+    /* Vivid kids colour palette — dots */
+    var DOT_COLS = [
+        '#FF6B6B',  /* coral red   */
+        '#FFD700',  /* sunny yellow*/
+        '#FF4FC8',  /* hot pink    */
+        '#5BC8FF',  /* sky blue    */
+        '#BF5FFF',  /* purple      */
+        '#00DCCC',  /* turquoise   */
+        '#FF9A3C',  /* orange      */
+        '#86EFAC',  /* mint green  */
+        '#FF4F6B',  /* rose red    */
+        '#ffffff',  /* white spark */
+        '#FFB347'   /* peach       */
+    ];
+
+    /* Vivid glow blob colours */
+    var GLOW_COLS = [
+        '#FFD700',  /* yellow glow  */
+        '#5BC8FF',  /* blue glow    */
+        '#FF6B6B',  /* coral glow   */
+        '#BF5FFF',  /* purple glow  */
+        '#FF4FC8',  /* pink glow    */
+        '#00DCCC'   /* teal glow    */
+    ];
+
+    /* ── Build particle pool (reduced by 70%) ── */
+    var pool = [];
+
+    /* 11 small vivid glowing dots */
+    for (var i = 0; i < 11; i++) {
+        pool.push({
+            x      : Math.random(),
+            y      : Math.random(),
+            r      : 2 + Math.random() * 5.5,
+            col    : DOT_COLS[Math.floor(Math.random() * DOT_COLS.length)],
+            speed  : 0.12 + Math.random() * 0.28,
+            sway   : (Math.random() - 0.5) * 0.003,
+            phase  : Math.random() * Math.PI * 2,
+            swayAmt: 18 + Math.random() * 36,
+            maxA   : 0.55 + Math.random() * 0.40,
+            glow   : false
+        });
+    }
+
+    /* 3 large ambient glow blobs */
+    for (var j = 0; j < 3; j++) {
+        pool.push({
+            x      : Math.random(),
+            y      : Math.random(),
+            r      : 32 + Math.random() * 62,
+            col    : GLOW_COLS[Math.floor(Math.random() * GLOW_COLS.length)],
+            speed  : 0.05 + Math.random() * 0.12,
+            sway   : (Math.random() - 0.5) * 0.002,
+            phase  : Math.random() * Math.PI * 2,
+            swayAmt: 28 + Math.random() * 50,
+            maxA   : 0.14 + Math.random() * 0.14,
+            glow   : true
+        });
+    }
+
+    function hexToRgb(hex) {
+        var r = parseInt(hex.slice(1,3),16);
+        var g = parseInt(hex.slice(3,5),16);
+        var b = parseInt(hex.slice(5,7),16);
+        return r+','+g+','+b;
+    }
+
+    function draw() {
+        var W = canvas.width, H = canvas.height;
+        ctx.clearRect(0, 0, W, H);
+
+        pool.forEach(function (p) {
+            /* Move upward with gentle sway */
+            p.y  -= p.speed / H;
+            p.phase += 0.008;
+            p.x  += Math.sin(p.phase) * p.sway;
+
+            /* Wrap back to bottom when exiting top */
+            if (p.y < -p.r / H) {
+                p.y = 1 + p.r / H;
+                p.x = Math.random();
+            }
+            /* Clamp x */
+            if (p.x < 0) p.x = 1;
+            if (p.x > 1) p.x = 0;
+
+            /* Opacity: fade in at bottom 20%, fade out at top 20% */
+            var a;
+            if      (p.y > 0.8) a = ((1 - p.y) / 0.2) * p.maxA;
+            else if (p.y < 0.2) a = (p.y / 0.2)       * p.maxA;
+            else                a = p.maxA;
+
+            var px = p.x * W, py = p.y * H;
+            var rgb = hexToRgb(p.col);
+
+            ctx.save();
+            ctx.globalAlpha = a;
+
+            if (p.glow) {
+                /* Radial gradient blob */
+                var gr = ctx.createRadialGradient(px, py, 0, px, py, p.r);
+                gr.addColorStop(0,   'rgba('+rgb+',0.9)');
+                gr.addColorStop(0.4, 'rgba('+rgb+',0.4)');
+                gr.addColorStop(1,   'rgba('+rgb+',0)');
+                ctx.fillStyle = gr;
+                ctx.beginPath();
+                ctx.arc(px, py, p.r, 0, Math.PI * 2);
+                ctx.fill();
+            } else {
+                /* Crisp dot with soft halo */
+                var dr = ctx.createRadialGradient(px, py, 0, px, py, p.r * 2.5);
+                dr.addColorStop(0,   'rgba('+rgb+',1)');
+                dr.addColorStop(0.4, 'rgba('+rgb+',0.7)');
+                dr.addColorStop(1,   'rgba('+rgb+',0)');
+                ctx.fillStyle = dr;
+                ctx.beginPath();
+                ctx.arc(px, py, p.r * 2.5, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            ctx.restore();
+        });
+
+        requestAnimationFrame(draw);
+    }
+
+    draw();
+}());
+</script>
 {% endblock %}

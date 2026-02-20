@@ -222,21 +222,44 @@ function updateWishlistBadge(count) {
 
 function initCartPopup() {
     const popup = document.getElementById('cartPopup');
-    if (!popup) return;
+    const bottomBar = document.getElementById('bottomBar');
+    if (!popup || !bottomBar) return;
     const count = parseInt(popup.dataset.cartCount || '0', 10);
     if (count > 0) {
         const textEl = document.getElementById('cartPopupText');
         if (textEl) {
             textEl.textContent = count + ' item' + (count !== 1 ? 's' : '') + ' in your cart';
         }
+        popup.classList.remove('cart-popup-just-added');
+        showCheckmarkIcon(popup);
         popup.classList.add('visible');
+        bottomBar.classList.add('visible');
     }
 }
 
 let _cartPopupTimer = null;
 
+function showCartIcon(popup) {
+    if (!popup) return;
+    const check = popup.querySelector('.cart-popup-icon-check');
+    const cart = popup.querySelector('.cart-popup-icon-cart');
+    if (check) check.hidden = true;
+    if (cart) cart.hidden = false;
+    popup.classList.add('cart-popup-just-added');
+}
+
+function showCheckmarkIcon(popup) {
+    if (!popup) return;
+    const check = popup.querySelector('.cart-popup-icon-check');
+    const cart = popup.querySelector('.cart-popup-icon-cart');
+    if (check) check.hidden = false;
+    if (cart) cart.hidden = true;
+    popup.classList.remove('cart-popup-just-added');
+}
+
 function showCartPopup(cartCount) {
     const popup = document.getElementById('cartPopup');
+    const bottomBar = document.getElementById('bottomBar');
     const textEl = document.getElementById('cartPopupText');
     if (!popup) return;
 
@@ -249,14 +272,26 @@ function showCartPopup(cartCount) {
     popup.dataset.cartCount = cartCount;
 
     if (textEl) {
-        textEl.textContent = cartCount + ' item' + (cartCount !== 1 ? 's' : '') + ' in your cart';
+        textEl.textContent = 'Added! ' + cartCount + ' item' + (cartCount !== 1 ? 's' : '') + ' in your cart';
     }
 
+    showCartIcon(popup);
+    popup.classList.remove('cart-popup-empty');
     popup.classList.add('visible');
+    if (bottomBar) bottomBar.classList.add('visible');
+
+    _cartPopupTimer = setTimeout(function () {
+        showCheckmarkIcon(popup);
+        if (textEl) {
+            textEl.textContent = cartCount + ' item' + (cartCount !== 1 ? 's' : '') + ' in your cart';
+        }
+        _cartPopupTimer = null;
+    }, 2200);
 }
 
 function showAlreadyInCartPopup(cartCount) {
     const popup = document.getElementById('cartPopup');
+    const bottomBar = document.getElementById('bottomBar');
     const textEl = document.getElementById('cartPopupText');
     if (!popup) return;
 
@@ -266,9 +301,11 @@ function showAlreadyInCartPopup(cartCount) {
     }
 
     if (textEl) textEl.textContent = 'Already in your cart';
+    showCheckmarkIcon(popup);
+    popup.classList.remove('cart-popup-empty');
     popup.classList.add('visible', 'cart-popup-warning');
+    if (bottomBar) bottomBar.classList.add('visible');
 
-    // Revert to normal after 2s but keep bar visible
     _cartPopupTimer = setTimeout(function () {
         popup.classList.remove('cart-popup-warning');
         const count = parseInt(popup.dataset.cartCount || '0', 10);
@@ -408,6 +445,7 @@ function initQuickAddToCart() {
                     return;
                 }
                 updateCartBadge(data.cart_count);
+                if (typeof showCartPopup === "function") showCartPopup(data.cart_count);
                 showNotification("Added to cart!");
             } catch (error) {
                 showNotification("Unable to add to cart.", "error");

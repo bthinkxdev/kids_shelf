@@ -351,6 +351,8 @@
     .order-item {
         display: flex;
         gap: var(--space-3);
+        position: relative;
+        align-items: flex-start;
     }
     
     .order-item-image {
@@ -391,6 +393,45 @@
         font-weight: 800;
         color: var(--primary);
         font-family: var(--font-display);
+    }
+    
+    .order-item-remove-form {
+        flex-shrink: 0;
+        margin: 0;
+        padding: 0;
+    }
+    
+    .order-item-remove-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+        padding: 0;
+        border: 2px solid var(--gray-400);
+        border-radius: var(--radius-full);
+        background: var(--white);
+        color: #555;
+        cursor: pointer;
+        transition: all var(--transition-base);
+        -webkit-tap-highlight-color: transparent;
+    }
+    
+    .order-item-remove-btn svg {
+        flex-shrink: 0;
+        stroke: currentColor;
+    }
+    
+    .order-item-remove-btn:hover,
+    .order-item-remove-btn:active {
+        background: #FFE5E5;
+        border-color: #E53935;
+        color: #E53935;
+    }
+    
+    .order-item-remove-btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
     }
     
     .summary-row {
@@ -436,7 +477,7 @@
         border-color: #FF6B6B;
     }
     
-    /* Responsive */
+    /* Responsive: items (order summary) first on mobile */
     @media (max-width: 768px) {
         .checkout-container {
             grid-template-columns: 1fr;
@@ -445,11 +486,22 @@
         .order-summary {
             position: relative;
             top: 0;
+            order: -1;
+        }
+        
+        .checkout-form {
+            order: 0;
         }
         
         .form-row {
             grid-template-columns: 1fr;
         }
+    }
+    
+    /* Desktop: form left, summary right (summary first in HTML so shows first on mobile) */
+    @media (min-width: 769px) {
+        .checkout-form { order: 1; }
+        .order-summary { order: 2; }
     }
 </style>
 {% endblock %}
@@ -463,6 +515,49 @@
             </div>
 
             <div class="checkout-container">
+                <!-- Order Summary first so it shows at top on mobile -->
+                <div class="order-summary">
+                    <h3>Order Summary</h3>
+                    <div class="order-items" id="checkoutOrderItems">
+                        {% for item in items %}
+                            <div class="order-item" data-item-id="{{ item.id }}">
+                                <div class="order-item-image">
+                                    {% with image=item.product.images.first %}
+                                        {% if image %}
+                                            <img src="{{ image.image.url }}" alt="{{ item.product.name }}">
+                                        {% else %}
+                                            <img src="{% static 'images/banner.png' %}" alt="{{ item.product.name }}">
+                                        {% endif %}
+                                    {% endwith %}
+                                </div>
+                                <div class="order-item-info">
+                                    <div class="order-item-name">{{ item.product.name }}</div>
+                                    <div class="order-item-meta">Format: {{ item.variant.get_format_type_display }} | Qty: {{ item.quantity }}</div>
+                                    <div class="order-item-price">₹{{ item.line_total }}</div>
+                                </div>
+                                <button type="button" class="order-item-remove-btn js-remove-cart-item" data-item-id="{{ item.id }}" data-product-name="{{ item.product.name|escapejs }}" aria-label="Remove {{ item.product.name }} from cart">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                                    </svg>
+                                </button>
+                            </div>
+                        {% endfor %}
+                    </div>
+                    <div class="summary-row" id="checkoutSubtotalRow">
+                        <span>Subtotal</span>
+                        <span id="checkoutSubtotal">₹{{ totals.subtotal }}</span>
+                    </div>
+                    <div class="summary-row" id="checkoutShippingRow">
+                        <span>Shipping</span>
+                        <span id="checkoutShipping">{% if totals.shipping == 0 %}FREE 🎉{% else %}₹{{ totals.shipping }}{% endif %}</span>
+                    </div>
+                    <div class="summary-row total-row" id="checkoutTotalRow">
+                        <span>Total</span>
+                        <span id="checkoutTotal">₹{{ totals.total }}</span>
+                    </div>
+                </div>
+
                 <div class="checkout-form">
                     {% if form.errors %}
                         <div class="notification error">
@@ -586,38 +681,8 @@
                         <div class="form-section">
                             <h3 style="margin-bottom: var(--space-5);">💳 Payment Method</h3>
                             <div class="payment-options">
-                                <label class="payment-option {% if form.payment.value == 'cod' or not form.is_bound %}selected{% endif %}">
-                                    <input type="radio" name="payment" value="cod" {% if form.payment.value == 'cod' or not form.is_bound %}checked{% endif %}>
-                                    <div class="payment-option-content">
-                                        <div class="payment-checkbox">
-                                            <svg class="checkmark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
-                                                <polyline points="20 6 9 17 4 12"></polyline>
-                                            </svg>
-                                        </div>
-                                        <div class="payment-details">
-                                            <strong>💵 Cash on Delivery</strong>
-                                            <p>Pay when you receive your magical books</p>
-                                        </div>
-                                    </div>
-                                </label>
-
-                                <label class="payment-option {% if form.payment.value == 'whatsapp' %}selected{% endif %}">
-                                    <input type="radio" name="payment" value="whatsapp" {% if form.payment.value == 'whatsapp' %}checked{% endif %}>
-                                    <div class="payment-option-content">
-                                        <div class="payment-checkbox">
-                                            <svg class="checkmark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
-                                                <polyline points="20 6 9 17 4 12"></polyline>
-                                            </svg>
-                                        </div>
-                                        <div class="payment-details">
-                                            <strong>💬 WhatsApp Order</strong>
-                                            <p>Complete order via WhatsApp chat</p>
-                                        </div>
-                                    </div>
-                                </label>
-
-                                <label class="payment-option {% if form.payment.value == 'razorpay' %}selected{% endif %}">
-                                    <input type="radio" name="payment" value="razorpay" {% if form.payment.value == 'razorpay' %}checked{% endif %}>
+                                <label class="payment-option {% if form.payment.value == 'razorpay' or not form.is_bound %}selected{% endif %}">
+                                    <input type="radio" name="payment" value="razorpay" {% if form.payment.value == 'razorpay' or not form.is_bound %}checked{% endif %}>
                                     <div class="payment-option-content">
                                         <div class="payment-checkbox">
                                             <svg class="checkmark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
@@ -627,6 +692,21 @@
                                         <div class="payment-details">
                                             <strong>🔒 Online Payment</strong>
                                             <p>Secure online payment with Razorpay</p>
+                                        </div>
+                                    </div>
+                                </label>
+
+                                <label class="payment-option {% if form.payment.value == 'cod' %}selected{% endif %}">
+                                    <input type="radio" name="payment" value="cod" {% if form.payment.value == 'cod' %}checked{% endif %}>
+                                    <div class="payment-option-content">
+                                        <div class="payment-checkbox">
+                                            <svg class="checkmark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                                                <polyline points="20 6 9 17 4 12"></polyline>
+                                            </svg>
+                                        </div>
+                                        <div class="payment-details">
+                                            <strong>💵 Cash on Delivery</strong>
+                                            <p>Pay when you receive your magical books</p>
                                         </div>
                                     </div>
                                 </label>
@@ -641,49 +721,82 @@
                         </button>
                     </form>
                 </div>
-
-                <!-- Order Summary -->
-                <div class="order-summary">
-                    <h3>Order Summary</h3>
-                    <div class="order-items">
-                        {% for item in items %}
-                            <div class="order-item">
-                                <div class="order-item-image">
-                                    {% with image=item.product.images.first %}
-                                        {% if image %}
-                                            <img src="{{ image.image.url }}" alt="{{ item.product.name }}">
-                                        {% else %}
-                                            <img src="{% static 'images/banner.png' %}" alt="{{ item.product.name }}">
-                                        {% endif %}
-                                    {% endwith %}
-                                </div>
-                                <div class="order-item-info">
-                                    <div class="order-item-name">{{ item.product.name }}</div>
-                                    <div class="order-item-meta">Format: {{ item.variant.get_format_type_display }} | Qty: {{ item.quantity }}</div>
-                                    <div class="order-item-price">₹{{ item.line_total }}</div>
-                                </div>
-                            </div>
-                        {% endfor %}
-                    </div>
-                    <div class="summary-row">
-                        <span>Subtotal</span>
-                        <span>₹{{ totals.subtotal }}</span>
-                    </div>
-                    <div class="summary-row">
-                        <span>Shipping</span>
-                        <span>{% if totals.shipping == 0 %}FREE 🎉{% else %}₹{{ totals.shipping }}{% endif %}</span>
-                    </div>
-                    <div class="summary-row total-row">
-                        <span>Total</span>
-                        <span>₹{{ totals.total }}</span>
-                    </div>
-                </div>
             </div>
         </div>
     </section>
 {% endblock %}
 
 {% block extra_js %}
+<script>
+(function() {
+    var removeUrlPattern = "{% url 'store:cart_remove' item_id=0 %}";
+    var cartUrl = "{% url 'store:cart' %}";
+    
+    function getCsrfToken() {
+        var name = 'csrftoken';
+        var cookies = document.cookie.split(';');
+        for (var i = 0; i < cookies.length; i++) {
+            var c = cookies[i].trim();
+            if (c.indexOf(name + '=') === 0) return c.substring(name.length + 1);
+        }
+        return '';
+    }
+    
+    function removeItemFromCheckout(itemId, rowEl) {
+        var url = removeUrlPattern.replace('0', itemId);
+        var btn = rowEl.querySelector('.js-remove-cart-item');
+        if (btn) btn.disabled = true;
+        
+        fetch(url, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCsrfToken(),
+                'X-Requested-With': 'XMLHttpRequest',
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'Accept': 'application/json'
+            },
+            body: 'csrfmiddlewaretoken=' + encodeURIComponent(getCsrfToken())
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (!data.success) {
+                if (btn) btn.disabled = false;
+                return;
+            }
+            rowEl.style.opacity = '0';
+            rowEl.style.transform = 'translateX(-8px)';
+            setTimeout(function() {
+                rowEl.remove();
+                var subtotalEl = document.getElementById('checkoutSubtotal');
+                var shippingEl = document.getElementById('checkoutShipping');
+                var totalEl = document.getElementById('checkoutTotal');
+                if (data.totals) {
+                    var fmt = function(n) { return '₹' + Number(n).toFixed(2); };
+                    if (subtotalEl) subtotalEl.textContent = fmt(data.totals.subtotal);
+                    if (shippingEl) shippingEl.textContent = data.totals.shipping === 0 ? 'FREE 🎉' : fmt(data.totals.shipping);
+                    if (totalEl) totalEl.textContent = fmt(data.totals.total);
+                }
+                if (data.empty_cart && data.cart_count === 0) {
+                    window.location.href = cartUrl;
+                }
+            }, 220);
+        })
+        .catch(function() {
+            if (btn) btn.disabled = false;
+        });
+    }
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('.js-remove-cart-item').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                var itemId = this.getAttribute('data-item-id');
+                var row = this.closest('.order-item');
+                if (itemId && row) removeItemFromCheckout(itemId, row);
+            });
+        });
+    });
+})();
+</script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Address selection

@@ -27,7 +27,7 @@ def send_order_notification_email(order, request=None):
     if request:
         order_url = request.build_absolute_uri(f'/dashboard/orders/{order.order_number}/')
     else:
-        site_domain = getattr(settings, 'SITE_DOMAIN', 'https://queenorange.shop')
+        site_domain = getattr(settings, 'SITE_DOMAIN', 'https://kidsshelf.in')
         order_url = f"{site_domain}/dashboard/orders/{order.order_number}/"
 
     payment_method = "Cash on Delivery"
@@ -38,7 +38,7 @@ def send_order_notification_email(order, request=None):
         'order': order,
         'order_url': order_url,
         'payment_method': payment_method,
-        'site_name': 'Golden Elegance',
+        'site_name': 'Kids Shelf',
     }
 
     html_message = render_to_string('admin/order_notification_email.html', context)

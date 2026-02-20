@@ -13,8 +13,8 @@
     z-index: 1000;
     background: rgba(255, 255, 255, 0.98);
     backdrop-filter: blur(10px);
-    border-bottom: 2px solid var(--color-primary);
-    box-shadow: var(--shadow-sm);
+    border-bottom: 1px solid var(--color-border-light);
+    box-shadow: var(--shadow-xs);
 }
 
 .header-main {
@@ -38,7 +38,7 @@
     gap: var(--space-2);
     font-family: var(--font-display);
     font-size: 18px;
-    font-weight: var(--font-weight-bold);
+    font-weight: var(--font-weight-normal);
     color: var(--color-primary);
     transition: transform var(--transition-base);
 }
@@ -93,7 +93,7 @@
 .nav-link {
     position: relative;
     font-size: 14px;
-    font-weight: var(--font-weight-semibold);
+    font-weight: var(--font-weight-normal);
     color: var(--color-text-secondary);
     padding: var(--space-2);
     border-radius: var(--radius-sm);
@@ -387,7 +387,7 @@
     border: none;
     border-radius: var(--radius-lg);
     font-size: 16px;
-    font-weight: var(--font-weight-semibold);
+    font-weight: var(--font-weight-normal);
     cursor: pointer;
     transition: all var(--transition-base);
     font-family: var(--font-display);
@@ -435,7 +435,7 @@
     position: fixed;
     bottom: var(--space-6);
     right: var(--space-6);
-    z-index: 10000;
+    z-index: 10002;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -538,4 +538,59 @@
 
 .whatsapp {
     background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
+}
+
+/* ===== Social FAB (decoupled, standalone) ===== */
+
+.social-fab-wrapper .social-fab-inline {
+    margin-left: 0;
+    flex-shrink: 0;
+    position: relative;
+    bottom: auto !important;
+    right: auto !important;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-3);
+    min-height: 0;
+    padding: 0;
+}
+
+.social-fab-wrapper-standalone .social-fab-inline {
+    margin-left: 0;
+    margin-right: 0;
+}
+
+.social-fab-inline .social-fab-toggle {
+    width: 48px;
+    height: 48px;
+    flex-shrink: 0;
+}
+
+.social-fab-inline .social-fab-menu {
+    position: absolute;
+    bottom: 100%;
+    right: 0;
+    margin-bottom: 8px;
+    flex-direction: column;
+    max-height: 0;
+    overflow: hidden;
+    gap: var(--space-2);
+    transition: max-height 0.3s ease;
+}
+
+.social-fab-inline .social-fab-menu.active {
+    max-height: 200px;
+    display: flex;
+}
+
+.social-fab-inline .social-fab-item {
+    width: 48px;
+    height: 48px;
+    opacity: 0;
+    transform: scale(0);
+}
+
+.social-fab-inline .social-fab-menu.active .social-fab-item {
+    opacity: 1;
+    transform: scale(1);
 }

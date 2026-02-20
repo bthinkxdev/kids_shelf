@@ -1,57 +1,22 @@
 /* ============================================
-   KIDS SHELF - PROFESSIONAL OVERHAUL
-   Complete UI refinement for trust & professionalism
+   KIDS SHELF - PROFESSIONAL THEME OVERHAUL
+   Aligns all UI to 60-30-10 brand system.
+   Load last to override legacy styles.
    ============================================ */
 
-/* ============================================
-   REFINED COLOR SYSTEM - Professional & Trustworthy
-   ============================================ */
-
-:root {
-    /* Softer, more professional primary colors */
-    --color-primary: #E91E63;
-    --color-primary-dark: #C2185B;
-    --color-primary-light: #FCE4EC;
-    --color-primary-ultra-light: #FFF0F5;
-    
-    /* Professional secondary */
-    --color-secondary: #FF9800;
-    --color-accent: #00BCD4;
-    
-    /* Refined success/error */
-    --color-success: #4CAF50;
-    --color-error: #F44336;
-    --color-warning: #FFC107;
-    
-    /* Professional text colors */
-    --color-text-primary: #263238;
-    --color-text-secondary: #546E7A;
-    --color-text-muted: #90A4AE;
-    
-    /* Clean backgrounds */
-    --color-bg-primary: #FFFFFF;
-    --color-bg-secondary: #FAFAFA;
-    --color-bg-tertiary: #F5F5F5;
-    
-    /* Professional borders */
-    --color-border: #E0E0E0;
-    --color-border-light: #EEEEEE;
-    
-    /* Refined gradients */
-    --gradient-primary: linear-gradient(135deg, #E91E63 0%, #EC407A 100%);
-    --gradient-secondary: linear-gradient(135deg, #FF9800 0%, #FFB74D 100%);
-    --gradient-soft: linear-gradient(180deg, #FFFFFF 0%, #FAFAFA 100%);
-    
-    /* Professional shadows */
-    --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
-    --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.06);
-    --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.08);
-    --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.10);
-    --shadow-xl: 0 12px 24px rgba(0, 0, 0, 0.12);
+/* ── Global particle canvas: z-index 2 — above page sections,
+      below header (1000) / nav (9999) / bottom-bar (10000)
+      pointer-events none → no click blocking ── */
+#globalParticleCanvas {
+    position: fixed !important;
+    z-index: 2 !important;
+    pointer-events: none !important;
 }
 
+/* Hero stage lifted above global canvas (z-index 2) */
+
 /* ============================================
-   PROFESSIONAL BUTTON SYSTEM
+   OVERRIDES — Ensure design-system tokens win
    ============================================ */
 
 .btn,
@@ -62,28 +27,17 @@
 .bestseller-add-to-cart,
 button[type="submit"],
 input[type="submit"] {
-    font-family: var(--font-display) !important;
-    font-weight: 600 !important;
-    font-size: 14px !important;
-    padding: 12px 24px !important;
-    border-radius: 8px !important;
-    border: none !important;
-    cursor: pointer !important;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-    text-transform: none !important;
-    letter-spacing: 0.3px !important;
-    box-shadow: var(--shadow-sm) !important;
-    display: inline-flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    gap: 8px !important;
+    font-family: var(--font-heading) !important;
+    font-weight: var(--font-weight-medium) !important;
+    border-radius: var(--radius-btn) !important;
+    transition: all var(--transition-slow) !important;
 }
 
 .btn-primary,
 .add-to-cart-btn,
 .featured-add-to-cart,
 .bestseller-add-to-cart {
-    background: var(--gradient-primary) !important;
+    background: var(--color-primary) !important;
     color: white !important;
 }
 
@@ -91,228 +45,133 @@ input[type="submit"] {
 .add-to-cart-btn:hover,
 .featured-add-to-cart:hover,
 .bestseller-add-to-cart:hover {
-    transform: translateY(-2px) !important;
-    box-shadow: var(--shadow-md) !important;
+    background: var(--color-primary-dark) !important;
+    transform: translateY(-1px) !important;
 }
 
 .btn-secondary {
-    background: white !important;
+    background: transparent !important;
     color: var(--color-primary) !important;
     border: 2px solid var(--color-primary) !important;
 }
 
 .btn-secondary:hover {
     background: var(--color-primary-light) !important;
-    transform: translateY(-2px) !important;
-}
-
-.btn-whatsapp {
-    background: linear-gradient(135deg, #25D366 0%, #20BD5A 100%) !important;
-    color: white !important;
+    color: var(--color-primary) !important;
+    border-color: var(--color-primary) !important;
 }
 
 /* ============================================
-   PROFESSIONAL PRODUCT CARDS
+   PRODUCT CARDS — 20px padding, 12px radius, soft shadow, 0.3s hover
    ============================================ */
 
 .product-card,
 .featured-product-card,
 .bestseller-card {
-    background: white !important;
-    border-radius: 12px !important;
+    background: var(--color-bg-primary) !important;
+    border-radius: var(--radius-card) !important;
     border: 1px solid var(--color-border-light) !important;
-    box-shadow: var(--shadow-sm) !important;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-    overflow: hidden !important;
+    box-shadow: var(--shadow-card) !important;
+    transition: transform 0.3s ease, box-shadow 0.3s ease !important;
 }
 
 .product-card:hover,
 .featured-product-card:hover,
 .bestseller-card:hover {
     transform: translateY(-4px) !important;
-    box-shadow: var(--shadow-lg) !important;
-    border-color: var(--color-primary-light) !important;
-}
-.featured-product-card {
-    display: flex !important;
-    flex-direction: column !important;
+    box-shadow: var(--shadow-card-hover) !important;
 }
 
-.featured-product-link {
-    flex: 1 !important;
-    display: flex !important;
-    flex-direction: column !important;
+.featured-product-info,
+.bestseller-info,
+.product-info {
+    padding: var(--card-padding-internal) !important;
 }
 
-.featured-product-info {
-    flex: 1 !important;
-}
-
-/* Product card text - professional weights */
+/* Product name — not bold */
 .product-name,
 .featured-product-name,
-.bestseller-name {
-    font-size: 15px !important;
-    font-weight: 600 !important;
-    color: var(--color-text-primary) !important;
-    line-height: 1.4 !important;
-    margin-bottom: 6px !important;
+.bestseller-name,
+.featured-product-card h3,
+.bestseller-card h3 {
+    font-weight: var(--font-weight-normal) !important;
 }
 
-.product-author {
-    font-size: 13px !important;
-    font-weight: 400 !important;
-    color: var(--color-text-secondary) !important;
-    font-style: normal !important;
-}
-
-.product-category,
-.featured-product-category {
-    font-size: 11px !important;
-    font-weight: 600 !important;
-    color: var(--color-primary) !important;
-    text-transform: uppercase !important;
-    letter-spacing: 0.5px !important;
-}
-
-/* Price styling - professional */
+/* Price: 18px bold final; smaller muted original */
 .current-price,
-.product-price .current-price {
-    font-size: 20px !important;
-    font-weight: 700 !important;
+.product-price .current-price,
+.featured-product-price .current-price,
+.bestseller-price .current-price {
+    font-size: 18px !important;
+    font-weight: var(--font-weight-normal) !important;
     color: var(--color-primary) !important;
 }
 
 .original-price,
-.product-price .original-price {
-    font-size: 14px !important;
-    font-weight: 400 !important;
-    color: var(--color-text-muted) !important;
+.product-price .original-price,
+.featured-product-price .original-price,
+.bestseller-price .original-price {
+    font-size: var(--font-size-sm) !important;
+    font-weight: var(--font-weight-normal) !important;
+    color: var(--color-text-secondary) !important;
     text-decoration: line-through !important;
 }
 
-/* Professional discount badge - on image: absolute; next to price: in flow */
-.featured-product-badge {
-    background: var(--color-success) !important;
-    color: white !important;
-    font-size: 10px !important;
-    font-weight: 600 !important;
-    padding: 3px 8px !important;
-    border-radius: 6px !important;
-    box-shadow: var(--shadow-sm) !important;
-}
-
-.discount-badge {
-    background: var(--color-success) !important;
-    color: white !important;
-    font-size: 10px !important;
-    font-weight: 600 !important;
-    padding: 3px 8px !important;
-    border-radius: 6px !important;
-    box-shadow: var(--shadow-sm) !important;
-    vertical-align: middle !important;
-    margin-top: -18px !important;
-}
-.product-image .discount-badge {
-    position: absolute !important;
-    top: 8px !important;
-    right: 8px !important;
-    left: auto !important;
-    margin-top: 0 !important;
-    vertical-align: unset !important;
-    z-index: 3 !important;
-}
-.bestseller-image {
-    position: relative !important;
-}
-
+/* Brand-colored discount badges (no green) */
+.featured-product-badge,
+.discount-badge,
+.product-image .discount-badge,
 .bestseller-image .discount-badge {
-    position: absolute !important;
-    top: 8px !important;
-    right: 8px !important;
-    left: auto !important;
-    margin-top: 0 !important;
-    vertical-align: unset !important;
-    z-index: 3 !important;
+    background: var(--badge-discount-bg) !important;
+    color: var(--badge-discount-text) !important;
+    font-size: 10px !important;
+    font-weight: var(--font-weight-normal) !important;
+    padding: 4px 8px !important;
+    border-radius: var(--radius-sm) !important;
+}
+
+.bestseller-rank {
+    background: var(--color-primary) !important;
+    color: white !important;
 }
 
 /* ============================================
-   PROFESSIONAL BADGES
+   HERO — Solid primary, outlined secondary
    ============================================ */
 
-.book-badge,
-.age-badge,
-.bestseller-rank {
-    font-weight: 600 !important;
-    font-size: 11px !important;
-    padding: 5px 10px !important;
-    border-radius: 6px !important;
-    box-shadow: var(--shadow-sm) !important;
+.hero-title {
+    color: #3B1FA8 !important;
 }
 
-.book-badge {
-    background: var(--color-success) !important;
-    color: white !important;
-}
-
-.age-badge {
-    background: var(--color-accent) !important;
-    color: white !important;
-}
-
-.bestseller-rank {
-    background: var(--color-warning) !important;
-    color: #263238 !important;
-    font-weight: 700 !important;
-    width: 32px !important;
-    height: 32px !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    border-radius: 50% !important;
+.hero-description {
+    color: #6B4FA8 !important;
 }
 
 /* ============================================
-   PROFESSIONAL SECTION HEADERS
+   SECTION HEADERS & SPACING
    ============================================ */
 
 .section-title {
-    font-size: 28px !important;
-    font-weight: 700 !important;
+    font-family: var(--font-heading) !important;
+    font-weight: var(--font-weight-normal) !important;
     color: var(--color-text-primary) !important;
-    letter-spacing: -0.5px !important;
-    margin-bottom: 12px !important;
-}
-
-.section-subtitle {
-    font-size: 15px !important;
-    font-weight: 400 !important;
-    color: var(--color-text-secondary) !important;
 }
 
 .section-title::after {
-    background: var(--gradient-primary) !important;
-    height: 3px !important;
+    background: var(--color-primary) !important;
+}
+
+.section-subtitle {
+    color: var(--color-text-secondary) !important;
 }
 
 /* ============================================
-   PROFESSIONAL NAVIGATION
+   NAVIGATION
    ============================================ */
 
 .header {
     background: rgba(255, 255, 255, 0.98) !important;
     border-bottom: 1px solid var(--color-border-light) !important;
-    box-shadow: var(--shadow-sm) !important;
-}
-
-.logo {
-    font-size: 20px !important;
-    font-weight: 700 !important;
-}
-
-.nav-link {
-    font-weight: 500 !important;
-    color: var(--color-text-secondary) !important;
 }
 
 .nav-link:hover,
@@ -321,101 +180,29 @@ input[type="submit"] {
 }
 
 /* ============================================
-   PROFESSIONAL HERO SECTION
-   ============================================ */
-
-.hero-title {
-    font-size: 36px !important;
-    font-weight: 700 !important;
-    color: var(--color-text-primary) !important;
-    letter-spacing: -1px !important;
-}
-
-.hero-title-gradient {
-    background: var(--gradient-primary) !important;
-    -webkit-background-clip: text !important;
-    -webkit-text-fill-color: transparent !important;
-    background-clip: text !important;
-}
-
-.hero-description {
-    font-size: 16px !important;
-    font-weight: 400 !important;
-    color: var(--color-text-secondary) !important;
-    line-height: 1.6 !important;
-}
-
-/* ============================================
-   PROFESSIONAL FEATURE CARDS
+   FEATURE CARDS
    ============================================ */
 
 .feature-card {
-    background: white !important;
-    border-radius: 12px !important;
+    padding: var(--card-padding-internal) !important;
     border: 1px solid var(--color-border-light) !important;
-    box-shadow: var(--shadow-sm) !important;
-    padding: 16px !important;
-}
-
-.feature-card:hover {
-    transform: translateY(-4px) !important;
-    box-shadow: var(--shadow-md) !important;
-    border-color: var(--color-primary-light) !important;
 }
 
 .feature-icon {
-    background: var(--color-primary-light) !important;
-    color: var(--color-primary) !important;
-}
-
-.feature-title {
-    font-size: 14px !important;
-    font-weight: 600 !important;
-    color: var(--color-text-primary) !important;
-}
-
-.feature-description {
-    font-size: 11px !important;
-    font-weight: 400 !important;
-    color: var(--color-text-secondary) !important;
-}
-
-@media (min-width: 768px) {
-    .feature-card {
-        padding: 24px !important;
-    }
-    .feature-title {
-        font-size: 18px !important;
-    }
-    .feature-description {
-        font-size: 14px !important;
-    }
+    background: var(--color-primary) !important;
+    color: white !important;
 }
 
 /* ============================================
-   PROFESSIONAL AGE SELECTOR (home: one-row cards)
+   CATEGORY CARDS
    ============================================ */
-
-.section-age-selector .age-card:hover {
-    transform: none !important;
-}
-
-/* ============================================
-   PROFESSIONAL CATEGORY CARDS
-   ============================================ */
-
-.category-card {
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-}
 
 .category-card:hover {
     transform: translateY(-4px) !important;
 }
 
 .category-image {
-    border-radius: 12px !important;
     border: 1px solid var(--color-border-light) !important;
-    box-shadow: var(--shadow-sm) !important;
 }
 
 .category-card:hover .category-image {
@@ -423,291 +210,263 @@ input[type="submit"] {
     box-shadow: var(--shadow-md) !important;
 }
 
-.category-card h3 {
-    font-size: 15px !important;
-    font-weight: 600 !important;
+/* ============================================
+   PAGE HEADER (collection/shop) — Clean, not full gradient
+   ============================================ */
+
+.page-header {
+    background: var(--color-bg-primary) !important;
+    padding: var(--section-padding-mobile) 0 !important;
+    border-bottom: 1px solid var(--color-border-light) !important;
+}
+
+@media (min-width: 768px) {
+    .page-header {
+        padding: var(--section-padding-desktop) 0 !important;
+    }
+}
+
+.page-title {
     color: var(--color-text-primary) !important;
 }
 
+.page-description {
+    color: var(--color-text-secondary) !important;
+}
+
 /* ============================================
-   PROFESSIONAL TESTIMONIALS
+   FOOTER — Calm dark, integrated with theme
    ============================================ */
 
-.testimonial-card {
+.footer {
+    background: linear-gradient(135deg, #3D3D5C 0%, #2B2D42 100%) !important;
+    color: rgba(255, 255, 255, 0.9) !important;
+}
+
+.footer-logo,
+.footer-title {
+    color: white !important;
+}
+
+.footer-description,
+.footer-links a,
+.footer-newsletter-text {
+    color: rgba(255, 255, 255, 0.85) !important;
+}
+
+.footer-links a:hover {
+    color: white !important;
+}
+
+.social-link:hover {
     background: white !important;
-    border-radius: 12px !important;
+    color: var(--color-primary) !important;
+}
+
+/* ============================================
+   FILTERS & PAGINATION
+   ============================================ */
+
+.mobile-filter-btn,
+.sidebar-apply-btn,
+.drawer-apply-btn {
+    background: var(--color-primary) !important;
+}
+
+.mobile-filter-btn:hover,
+.sidebar-apply-btn:hover,
+.drawer-apply-btn:hover {
+    background: var(--color-primary-dark) !important;
+}
+
+.page-link.active {
+    background: var(--color-primary) !important;
+    border-color: var(--color-primary) !important;
+    color: white !important;
+}
+
+.age-pill:checked + .age-pill-label {
+    background: var(--color-primary) !important;
+    border-color: var(--color-primary) !important;
+    color: white !important;
+}
+
+/* ============================================
+   CTA & TESTIMONIALS
+   ============================================ */
+
+.cta-card {
     border: 1px solid var(--color-border-light) !important;
-    box-shadow: var(--shadow-sm) !important;
-    padding: 24px !important;
+    box-shadow: var(--shadow-lg) !important;
+}
+
+.testimonial-card {
+    border: 1px solid var(--color-border-light) !important;
+    transition: transform var(--transition-slow), box-shadow var(--transition-slow) !important;
 }
 
 .testimonial-card:hover {
     transform: translateY(-4px) !important;
     box-shadow: var(--shadow-md) !important;
-    border-color: var(--color-primary-light) !important;
-}
-
-.testimonial-text {
-    font-size: 14px !important;
-    font-weight: 400 !important;
-    color: var(--color-text-secondary) !important;
-    line-height: 1.6 !important;
-}
-
-.testimonial-author strong {
-    font-size: 15px !important;
-    font-weight: 600 !important;
-    color: var(--color-text-primary) !important;
 }
 
 /* ============================================
-   PROFESSIONAL FOOTER
+   HERO TITLE ANIMATIONS — Slow, magical, calm
    ============================================ */
 
-.footer {
-    background: linear-gradient(135deg, #263238 0%, #37474F 100%) !important;
-    color: rgba(255, 255, 255, 0.9) !important;
+/* Stage wraps banner + hero text — canvas lives here
+   z-index 3 keeps it above the global particle canvas (z-index 2) */
+.hero-stage {
+    position: relative !important;
+    overflow: hidden !important;
+    z-index: 3 !important;
 }
 
-.footer-logo {
-    font-size: 22px !important;
-    font-weight: 700 !important;
-    color: white !important;
+/* Canvas spans full stage: over banner AND hero text */
+.hero-canvas {
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    pointer-events: none !important;
+    z-index: 1 !important;
 }
 
-.footer-title {
-    font-size: 16px !important;
-    font-weight: 600 !important;
-    color: white !important;
+/* Banner image below canvas */
+.hero-stage .banner-section,
+.hero-stage .banner-slider,
+.hero-stage .banner-slide {
+    position: relative !important;
+    z-index: 0 !important;
 }
 
-.footer-description,
-.footer-links a {
-    font-size: 14px !important;
-    font-weight: 400 !important;
-    color: rgba(255, 255, 255, 0.8) !important;
+/* Hero text section — no overflow clip, canvas handles it */
+.hero-text-section {
+    position: relative !important;
+    overflow: visible !important;
+}
+
+/* Text and buttons above canvas */
+.hero-content,
+.hero-actions {
+    position: relative !important;
+    z-index: 2 !important;
+}
+
+/* Whole title: slow gentle float */
+.hero-title {
+    animation: heroTitleFloat 9s ease-in-out infinite !important;
+}
+
+@keyframes heroTitleFloat {
+    0%,  100% { transform: translateY(0px);  }
+    45%       { transform: translateY(-8px); }
+    55%       { transform: translateY(-8px); }
+}
+
+/* Per-word wave — staggered via --i custom property */
+.hero-word {
+    display: inline-block !important;
+    color: #3B1FA8 !important;
+    -webkit-text-fill-color: #3B1FA8 !important;
+    animation: heroWordWave 6s ease-in-out infinite !important;
+    animation-delay: calc(var(--i, 0) * 0.55s) !important;
+    will-change: transform !important;
+}
+
+@keyframes heroWordWave {
+    0%,  100% { transform: translateY(0)    rotate(0deg);    }
+    25%       { transform: translateY(-7px) rotate(-0.5deg); }
+    50%       { transform: translateY(0)    rotate(0deg);    }
+    75%       { transform: translateY(4px)  rotate(0.5deg);  }
+}
+
+/* "Wonder Tales" — vivid kids rainbow sweep */
+.hero-title-gradient {
+    background-image: linear-gradient(
+        90deg,
+        #FFD700  0%,
+        #FF8C00  13%,
+        #FF4F6B  26%,
+        #FF4FC8  39%,
+        #BF5FFF  52%,
+        #5BC8FF  65%,
+        #00DCCC  78%,
+        #FFD700  91%,
+        #FF8C00  100%
+    ) !important;
+    background-size: 300% auto !important;
+    -webkit-background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+    background-clip: text !important;
+    animation: heroGradientSweep 5s linear infinite !important;
+    display: inline-block !important;
+    filter: drop-shadow(0 0 8px rgba(255,215,0,0.35)) !important;
+}
+
+@keyframes heroGradientSweep {
+    0%   { background-position: 0%   center; }
+    100% { background-position: 300% center; }
+}
+
+/* Glow pulse on the full hero title */
+@keyframes heroTitleGlow {
+    0%,  100% { filter: drop-shadow(0 0 6px rgba(255,79,200,0.20)); }
+    33%        { filter: drop-shadow(0 0 14px rgba(91,200,255,0.35)); }
+    66%        { filter: drop-shadow(0 0 14px rgba(255,215,0,0.30)); }
+}
+
+.hero-title {
+    animation:
+        heroTitleFloat 9s ease-in-out infinite,
+        heroTitleGlow  7s ease-in-out infinite !important;
+}
+
+/* Shimmer light-beam sweep across the title */
+.hero-title::after {
+    content: '' !important;
+    position: absolute !important;
+    top: -20px !important;
+    left: -80px !important;
+    width: 60px !important;
+    height: calc(100% + 40px) !important;
+    background: linear-gradient(
+        105deg,
+        transparent 30%,
+        rgba(255, 255, 255, 0.35) 50%,
+        transparent 70%
+    ) !important;
+    transform: skewX(-18deg) !important;
+    animation: heroShimmerSweep 7s ease-in-out infinite !important;
+    pointer-events: none !important;
+    z-index: 2 !important;
+}
+
+.hero-title {
+    position: relative !important;
+    overflow: visible !important;
+}
+
+@keyframes heroShimmerSweep {
+    0%   { left: -80px;  opacity: 0; }
+    10%  { opacity: 1;   }
+    55%  { left: 110%;   opacity: 1; }
+    60%  { opacity: 0;   }
+    100% { left: 110%;   opacity: 0; }
 }
 
 /* ============================================
-   PROFESSIONAL RATINGS
+   SMOOTH TRANSITIONS GLOBAL
    ============================================ */
 
-.bestseller-rating,
-.product-rating {
-    font-size: 13px !important;
-    color: var(--color-text-secondary) !important;
-}
-
-.rating-stars {
-    color: #FFC107 !important;
-}
-
-/* ============================================
-   PROFESSIONAL PAGE HEADER
-   ============================================ */
-
-.page-header {
-    background: var(--gradient-primary) !important;
-    padding: 56px 0 !important;
-    border-bottom: none !important;
-}
-
-.page-title {
-    font-size: 36px !important;
-    font-weight: 700 !important;
-    color: white !important;
-    letter-spacing: -0.5px !important;
-    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
-}
-
-.page-description {
-    font-size: 16px !important;
-    font-weight: 400 !important;
-    color: rgba(255, 255, 255, 0.95) !important;
-}
-
-/* ============================================
-   PROFESSIONAL FILTER DRAWER (Mobile)
-   ============================================ */
-
-.filter-drawer-overlay {
-    background: rgba(0, 0, 0, 0.5) !important;
-    backdrop-filter: blur(4px) !important;
-}
-
-.filter-drawer {
-    border-radius: 20px 20px 0 0 !important;
-    box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.15) !important;
-}
-
-.drawer-title {
-    font-size: 20px !important;
-    font-weight: 700 !important;
-    color: var(--color-text-primary) !important;
-}
-
-.mobile-filter-btn {
-    font-weight: 600 !important;
-    border-radius: 8px !important;
-}
-
-/* ============================================
-   PROFESSIONAL SIDEBAR FILTERS
-   ============================================ */
-
-.sidebar-filters {
-    background: white !important;
-    border-radius: 12px !important;
-    border: 1px solid var(--color-border-light) !important;
-    box-shadow: var(--shadow-sm) !important;
-}
-
-.sidebar-title {
-    font-size: 18px !important;
-    font-weight: 700 !important;
-    color: var(--color-text-primary) !important;
-}
-
-.filter-label {
-    font-size: 13px !important;
-    font-weight: 600 !important;
-    color: var(--color-text-primary) !important;
-}
-
-.filter-group select,
-.filter-group input[type="number"] {
-    font-weight: 400 !important;
-    border: 1px solid var(--color-border) !important;
-    background: var(--color-bg-secondary) !important;
-}
-
-/* ============================================
-   PROFESSIONAL AGE PILLS
-   ============================================ */
-
-.age-pill-label {
-    background: white !important;
-    border: 1px solid var(--color-border) !important;
-    border-radius: 8px !important;
-    font-weight: 600 !important;
-    color: var(--color-text-primary) !important;
-    padding: 10px 16px !important;
-}
-
-.age-pill-label:hover {
-    background: var(--color-primary-light) !important;
-    border-color: var(--color-primary) !important;
-    color: var(--color-primary) !important;
-}
-
-.age-pill:checked + .age-pill-label {
-    background: var(--gradient-primary) !important;
-    border-color: var(--color-primary) !important;
-    color: white !important;
-}
-
-/* ============================================
-   PROFESSIONAL PAGINATION
-   ============================================ */
-
-.pagination .page-link {
-    font-weight: 600 !important;
-    border: 1px solid var(--color-border) !important;
-    background: white !important;
-    color: var(--color-text-primary) !important;
-    border-radius: 8px !important;
-}
-
-.pagination .page-link:hover {
-    background: var(--color-primary-light) !important;
-    border-color: var(--color-primary) !important;
-    color: var(--color-primary) !important;
-}
-
-.pagination .page-link.active {
-    background: var(--gradient-primary) !important;
-    border-color: var(--color-primary) !important;
-    color: white !important;
-}
-
-/* ============================================
-   PROFESSIONAL NO PRODUCTS STATE
-   ============================================ */
-
-.no-products {
-    background: var(--gradient-soft) !important;
-    border-radius: 12px !important;
-    border: 1px dashed var(--color-border) !important;
-}
-
-.no-products h2 {
-    font-weight: 700 !important;
-    color: var(--color-text-primary) !important;
-}
-
-.no-products p {
-    font-weight: 400 !important;
-    color: var(--color-text-secondary) !important;
-}
-
-/* ============================================
-   PROFESSIONAL CTA SECTION
-   ============================================ */
-
-.cta-card {
-    background: white !important;
-    border-radius: 16px !important;
-    border: 1px solid var(--color-border-light) !important;
-    box-shadow: var(--shadow-lg) !important;
-}
-
-.cta-title {
-    font-weight: 700 !important;
-    color: var(--color-text-primary) !important;
-}
-
-.cta-description {
-    font-weight: 400 !important;
-    color: var(--color-text-secondary) !important;
-}
-
-/* ============================================
-   RESPONSIVE ADJUSTMENTS
-   ============================================ */
-
-@media (max-width: 768px) {
-    .section-title {
-        font-size: 24px !important;
-    }
-    
-    .hero-title {
-        font-size: 28px !important;
-    }
-    
-    .page-title {
-        font-size: 28px !important;
-    }
-    
-    .btn,
-    .btn-primary,
-    .btn-secondary {
-        font-size: 13px !important;
-        padding: 10px 20px !important;
-    }
-}
-
-/* ============================================
-   REMOVE EXCESSIVE ANIMATIONS
-   ============================================ */
-
-* {
-    animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1) !important;
-}
-
-/* Smooth, subtle animations only */
-.product-card:hover,
-.feature-card:hover,
-.category-card:hover,
-.testimonial-card:hover {
-    animation: none !important;
+a,
+button,
+.btn,
+.product-card,
+.feature-card,
+.category-card,
+.testimonial-card,
+.page-link {
+    transition-duration: 0.3s !important;
 }
