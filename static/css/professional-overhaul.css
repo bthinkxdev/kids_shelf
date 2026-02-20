@@ -133,6 +133,20 @@ input[type="submit"] {
     box-shadow: var(--shadow-lg) !important;
     border-color: var(--color-primary-light) !important;
 }
+.featured-product-card {
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+.featured-product-link {
+    flex: 1 !important;
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+.featured-product-info {
+    flex: 1 !important;
+}
 
 /* Product card text - professional weights */
 .product-name,
@@ -196,6 +210,30 @@ input[type="submit"] {
     padding: 3px 8px !important;
     border-radius: 6px !important;
     box-shadow: var(--shadow-sm) !important;
+    vertical-align: middle !important;
+    margin-top: -18px !important;
+}
+.product-image .discount-badge {
+    position: absolute !important;
+    top: 8px !important;
+    right: 8px !important;
+    left: auto !important;
+    margin-top: 0 !important;
+    vertical-align: unset !important;
+    z-index: 3 !important;
+}
+.bestseller-image {
+    position: relative !important;
+}
+
+.bestseller-image .discount-badge {
+    position: absolute !important;
+    top: 8px !important;
+    right: 8px !important;
+    left: auto !important;
+    margin-top: 0 !important;
+    vertical-align: unset !important;
+    z-index: 3 !important;
 }
 
 /* ============================================

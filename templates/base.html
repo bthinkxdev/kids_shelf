@@ -79,6 +79,9 @@
                             <svg class="wishlist-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
                             </svg>
+                            {% if wishlist_count %}
+                                <span class="wishlist-badge">{{ wishlist_count }}</span>
+                            {% endif %}
                         </a>
                         <a href="{% url 'store:cart' %}" class="cart-btn" aria-label="Shopping cart">
                             <svg class="cart-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -230,6 +233,19 @@
                 </svg>
             </a>
         </div>
+    </div>
+    <div id="cartPopup" role="status" aria-live="polite" data-cart-count="{{ cart_count|default:0 }}">
+        <div class="cart-popup-left">
+            <div class="cart-popup-icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                    <path d="M20 6L9 17l-5-5"/>
+                </svg>
+            </div>
+            <span id="cartPopupText">1 item added</span>
+        </div>
+        <a href="{% url 'store:cart' %}" class="cart-popup-viewbtn">
+            View Cart &rsaquo;
+        </a>
     </div>
 
     <script src="{% static 'js/main.js' %}"></script>

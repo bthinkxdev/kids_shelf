@@ -240,7 +240,13 @@
     letter-spacing: 0.2px !important;
     /* margin-left: auto !important; */
 }
-
+.discount-badge {
+    position: absolute !important;
+    top: 8px !important;
+    right: 8px !important;
+    left: auto !important;
+    z-index: 3 !important;
+}
 /* Compact action button - PROFESSIONAL */
 .add-to-cart-btn,
 .product-card .add-to-cart-btn,

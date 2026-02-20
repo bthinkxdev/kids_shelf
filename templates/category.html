@@ -141,22 +141,25 @@
                                                     <span class="age-badge">{{ product.age_range_display }}</span>
                                                 {% endif %}
                                             </div>
+                                            {% if product.original_price and product.original_price > product.price and product.discount_percent > 0 %}
+                                                <span class="discount-badge">{{ product.discount_percent }}% OFF</span>
+                                            {% endif %}
                                         </div>
                                         <div class="product-info">
                                             <p class="product-category">{{ product.category.name }}</p>
                                             <h3 class="product-name">{{ product.name }}</h3>
                                             <p class="product-author">by {{ product.author }}</p>
                                             <div class="product-price">
-    {% if product.original_price and product.original_price > product.price %}
-        <span class="current-price">{{ product.price }}</span>
-        <span class="original-price">₹{{ product.original_price }}</span>
-        {% if product.discount_percent > 0 %}
-            <span class="discount-badge">{{ product.discount_percent }}% OFF</span>
-        {% endif %}
-    {% else %}
-        <span class="current-price">{{ product.price }}</span>
-    {% endif %}
-</div>
+                                                {% if product.original_price and product.original_price > product.price %}
+                                                    <span class="original-price">₹{{ product.original_price }}</span>
+                                                    <span class="current-price">{{ product.price }}</span>
+                                                    {% comment %} {% if product.discount_percent > 0 %}
+                                                        <span class="discount-badge">{{ product.discount_percent }}% OFF</span>
+                                                    {% endif %} {% endcomment %}
+                                                {% else %}
+                                                    <span class="current-price">{{ product.price }}</span>
+                                                {% endif %}
+                                            </div>
                                         </div>
                                     </a>
                                     <button class="add-to-cart-btn" onclick="location.href='{% url 'store:product_detail' product.slug %}'">

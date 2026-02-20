@@ -275,39 +275,63 @@ class AddToCartView(View):
     def post(self, request, *args, **kwargs):
         is_ajax = request.headers.get("x-requested-with") == "XMLHttpRequest"
         form = CartAddForm(request.POST)
+        
         if not form.is_valid():
-            messages.error(request, "Invalid cart data.")
             if is_ajax:
                 return JsonResponse({"success": False, "error": "Invalid cart data."}, status=400)
+            messages.error(request, "Invalid cart data.")
             product_id = request.POST.get("product_id")
             if product_id and Product.objects.filter(pk=product_id).exists():
                 product = Product.objects.get(pk=product_id)
                 return redirect("store:product_detail", slug=product.slug)
             return redirect("store:cart")
+
         data = form.cleaned_data
         product = get_object_or_404(Product, pk=data["product_id"])
+        
         book_format = BookFormat.objects.filter(
             product=product,
             format_type=data["format_type"],
             is_active=True,
         ).first()
+        
         if not book_format:
-            messages.error(request, "Selected format is unavailable.")
             if is_ajax:
-                return JsonResponse({"success": False, "error": "Selected variant is unavailable."}, status=400)
+                return JsonResponse({"success": False, "error": "Selected format is unavailable."}, status=400)
+            messages.error(request, "Selected format is unavailable.")
             return redirect("store:product_detail", slug=product.slug)
+
         cart = CartService.get_or_create_cart(request)
+        
+        # Check if item already exists in cart
+        existing_item = CartItem.objects.filter(cart=cart, variant=book_format).first()
+        if existing_item:
+            if is_ajax:
+                cart_count = cart.items.count()
+                return JsonResponse({
+                    "success": False,
+                    "already_in_cart": True,
+                    "cart_count": cart_count,
+                    "error": f'"{product.name}" is already in your cart.',
+                }, status=200)
+            messages.info(request, f'"{product.name}" is already in your cart.')
+            return redirect("store:product_detail", slug=product.slug)
+
         try:
             CartService.add_item(cart, book_format, data["quantity"])
         except (StockError, CartError) as exc:
-            messages.error(request, str(exc))
             if is_ajax:
                 return JsonResponse({"success": False, "error": str(exc)}, status=400)
+            messages.error(request, str(exc))
         else:
-            messages.success(request, "Added to cart.")
             if is_ajax:
                 cart_count = cart.items.count()
-                return JsonResponse({"success": True, "cart_count": cart_count})
+                return JsonResponse({
+                    "success": True,
+                    "cart_count": cart_count,
+                })
+            messages.success(request, "Added to cart.")
+
         action = request.POST.get("action", "add")
         if action == "buy":
             return redirect("store:checkout")

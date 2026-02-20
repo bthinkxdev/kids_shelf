@@ -487,14 +487,14 @@
         font-size: 18px; /* Reduced from 20px */
     }
 
-    .product-card .discount-badge {
+    {% comment %} .product-card .discount-badge {
         background-color: #e74c3c;
         color: white;
         padding: 2px 6px;
         border-radius: 4px;
         font-size: 12px;
         font-weight: bold;
-    }
+    } {% endcomment %}
     
     /* Responsive */
     @media (max-width: 768px) {
@@ -644,7 +644,7 @@
                     </div>
 
                     {% if formats and has_stock %}
-                    <form method="post" action="{% url 'store:cart_add' %}">
+                    <form id="addToCartForm" method="post" action="{% url 'store:cart_add' %}">
                         {% csrf_token %}
                         <input type="hidden" name="product_id" value="{{ product.id }}">
                         <input type="hidden" name="format_type" id="selectedFormat" value="{% if formats %}{{ formats.0.format_type }}{% endif %}">
@@ -858,6 +858,9 @@
                                 {% if related.age_group %}
                                     <span class="age-badge">{{ related.get_age_group_display }}</span>
                                 {% endif %}
+                                {% if related.original_price and related.original_price > related.price and related.discount_percent > 0 %}
+                                    <span class="discount-badge">{{ related.discount_percent }}% OFF</span>
+                                {% endif %}
                             </div>
                             <div class="product-info">
                                 <h3 class="product-name">{{ related.name }}</h3>
@@ -866,9 +869,9 @@
                                     {% if related.original_price and related.original_price > related.price %}
                                         <span class="original-price">₹{{ related.original_price }}</span>
                                         <span class="current-price">₹{{ related.price }}</span>
-                                        {% if related.discount_percent > 0 %}
+                                        {% comment %} {% if related.discount_percent > 0 %}
                                             <span class="discount-badge">{{ related.discount_percent }}% OFF</span>
-                                        {% endif %}
+                                        {% endif %} {% endcomment %}
                                     {% else %}
                                         <span class="current-price">₹{{ related.price }}</span>
                                     {% endif %}

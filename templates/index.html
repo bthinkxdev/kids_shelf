@@ -221,6 +221,9 @@
                                             <img src="{% static 'images/banner.png' %}" alt="{{ product.name }}" loading="lazy">
                                         {% endif %}
                                     {% endwith %}
+                                    {% if product.original_price and product.original_price > product.price and product.discount_percent > 0 %}
+                                        <span class="discount-badge">{{ product.discount_percent }}% OFF</span>
+                                    {% endif %}
                                 </div>
                                 <div class="bestseller-info">
                                     <h3 class="bestseller-name">{{ product.name }}</h3>
@@ -239,9 +242,9 @@
                                         {% if product.original_price and product.original_price > product.price %}
                                             <span class="original-price">₹{{ product.original_price }}</span>
                                             <span class="current-price">₹{{ product.price }}</span>
-                                            {% if product.discount_percent > 0 %}
+                                            {% comment %} {% if product.discount_percent > 0 %}
                                                 <span class="discount-badge">{{ product.discount_percent }}% OFF</span>
-                                            {% endif %}
+                                            {% endif %} {% endcomment %}
                                         {% else %}
                                             <span class="current-price">₹{{ product.price }}</span>
                                         {% endif %}
