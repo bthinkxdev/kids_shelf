@@ -15,10 +15,9 @@
         <!-- Sidebar -->
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
-                <h2 class="sidebar-logo">
-                    <i class="fas fa-crown"></i>
-                    <span>Kids Shelf</span>
-                </h2>
+                <a href="{% url 'store:home' %}" class="sidebar-logo">
+                    <img src="{% static 'images/logo.png' %}" alt="Kids Shelf" class="sidebar-logo-img">
+                </a>
                 <button class="sidebar-close" id="sidebarClose">
                     <i class="fas fa-times"></i>
                 </button>
@@ -108,7 +107,7 @@
             <!-- Admin footer with social links (same as store) -->
             <footer class="admin-footer">
                 <div class="admin-footer-inner">
-                    <span class="admin-footer-brand">Kids Shelf</span>
+                    <img src="{% static 'images/logo.png' %}" alt="Kids Shelf" class="admin-footer-logo-img">
                     <div class="admin-footer-social">
                         <a href="https://www.instagram.com/kids__shelf?igsh=bzdtd2FmbWs2eXhw" target="_blank" rel="noopener" aria-label="Instagram" class="admin-social-link">
                             <i class="fab fa-instagram"></i>

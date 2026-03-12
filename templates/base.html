@@ -30,8 +30,7 @@
             <div class="container">
                 <div class="nav-wrapper">
                     <a href="{% url 'store:home' %}" class="logo">
-                        <!-- Book emoji added via CSS ::before -->
-                        <span class="logo-text">Kids Shelf</span>
+                        <img src="{% static 'images/logo.png' %}" alt="Kids Shelf" class="logo-img">
                     </a>
 
                     <ul class="nav-menu">
@@ -143,7 +142,7 @@
             <div class="footer-grid">
                 <div class="footer-brand">
                     <div class="footer-logo">
-                        📚 Kids Shelf
+                        <img src="{% static 'images/logo.png' %}" alt="Kids Shelf" class="footer-logo-img">
                     </div>
                     <p class="footer-description">New/Preloved imported books for kids aged 6 months to 10 years</p>
                     <p class="footer-description">

@@ -35,39 +35,28 @@
 .logo {
     display: flex;
     align-items: center;
-    gap: var(--space-2);
-    font-family: var(--font-display);
-    font-size: 18px;
-    font-weight: var(--font-weight-normal);
-    color: var(--color-primary);
+    text-decoration: none;
     transition: transform var(--transition-base);
-}
-
-.logo::before {
-    content: '📚';
-    font-size: 22px;
+    flex-shrink: 0;
 }
 
 .logo:hover {
-    transform: scale(1.05);
+    transform: scale(1.04);
 }
 
-.logo-text {
-    background: var(--gradient-primary);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+.logo-img {
+    height: 38px;
+    width: auto;
+    display: block;
+    object-fit: contain;
 }
 
 @media (min-width: 768px) {
-    .logo {
-        font-size: 20px;
-    }
-    
-    .logo::before {
-        font-size: 24px;
+    .logo-img {
+        height: 42px;
     }
 }
+
 
 /* ===== NAVIGATION MENU (Desktop) ===== */
 
