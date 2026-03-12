@@ -91,6 +91,7 @@ class ProductForm(forms.ModelForm):
             "age_groups",  
             "page_count",
             "language",
+            "condition",
             "price",
             "original_price",  
             "is_featured",
@@ -109,6 +110,7 @@ class ProductForm(forms.ModelForm):
             "isbn": forms.TextInput(attrs={"class": "form-control", "placeholder": "ISBN-13"}),
             "page_count": forms.NumberInput(attrs={"class": "form-control", "placeholder": "Number of pages", "min": "1"}),
             "language": forms.TextInput(attrs={"class": "form-control", "placeholder": "English"}),
+            "condition": forms.Select(attrs={"class": "form-control"}),
             "price": forms.NumberInput(attrs={"class": "form-control", "placeholder": "Sale Price", "step": "0.01", "min": "0"}),
             "original_price": forms.NumberInput(attrs={"class": "form-control", "placeholder": "Original MRP (optional)", "step": "0.01", "min": "0"}),
             "is_featured": forms.CheckboxInput(attrs={"class": "form-check-input"}),
@@ -271,7 +273,7 @@ class ProductBasicForm(forms.ModelForm):
             "category", "name", "slug", "description",
             "author", "illustrator", "publisher",
             "publication_year", "isbn", "page_count",
-            "language", "price", "original_price",
+            "language", "condition", "price", "original_price",
             "is_featured", "is_bestseller", "is_active",
         ]
 

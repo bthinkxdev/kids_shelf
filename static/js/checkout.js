@@ -60,7 +60,7 @@ function initPaymentSelection() {
         });
     });
     
-    // If no radio is checked, check the first one (COD)
+    // If no radio is checked, check the first one (Online Payment)
     const checkedRadio = Array.from(paymentRadios).find(radio => radio.checked);
     if (!checkedRadio && paymentRadios.length > 0) {
         paymentRadios[0].checked = true;

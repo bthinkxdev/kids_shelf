@@ -679,6 +679,12 @@
                                     <span class="book-detail-value">{{ product.get_age_group_display }}</span>
                                 </div>
                             {% endif %}
+                            {% if product.condition %}
+                                <div class="book-detail-item">
+                                    <span class="book-detail-label">🧾 Condition</span>
+                                    <span class="book-detail-value">{{ product.get_condition_display }}</span>
+                                </div>
+                            {% endif %}
                             {% if product.page_count %}
                                 <div class="book-detail-item">
                                     <span class="book-detail-label">📄 Pages</span>

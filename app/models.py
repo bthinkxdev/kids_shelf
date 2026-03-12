@@ -73,6 +73,14 @@ class ProductQuerySet(models.QuerySet):
 
 
 class Product(TimeStampedModel):
+    class Condition(models.TextChoices):
+        NEW = "new", "New"
+        LIKE_NEW = "like_new", "Preloved – Like New"
+        VERY_GOOD = "very_good", "Preloved – Very Good"
+        GOOD = "good", "Preloved – Good"
+        ACCEPTABLE = "acceptable", "Preloved – Acceptable"
+        DAMAGED = "damaged", "Damaged/Reading Copy"
+
     category = models.ForeignKey(Category, on_delete=models.PROTECT, related_name="products")
     name = models.CharField(max_length=200, db_index=True)
     slug = models.SlugField(max_length=220, unique=True)
@@ -91,6 +99,13 @@ class Product(TimeStampedModel):
     )
     page_count = models.PositiveIntegerField(blank=True, null=True)
     language = models.CharField(max_length=50, default='English')
+    condition = models.CharField(
+        max_length=20,
+        choices=Condition.choices,
+        default=Condition.NEW,
+        db_index=True,
+        help_text="Physical condition of the book."
+    )
     
     price = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0)])
     original_price = models.DecimalField(
@@ -474,7 +489,6 @@ class OrderItem(TimeStampedModel):
 
 class Payment(TimeStampedModel):
     class Method(models.TextChoices):
-        COD = "cod", "Cash on Delivery"
         WHATSAPP = "whatsapp", "WhatsApp Order"
         RAZORPAY = "razorpay", "Online Payment"
 
@@ -484,7 +498,7 @@ class Payment(TimeStampedModel):
         FAILED = "failed", "Failed"
 
     order = models.OneToOneField(Order, on_delete=models.CASCADE, related_name="payment")
-    method = models.CharField(max_length=20, choices=Method.choices, default=Method.COD, db_index=True)
+    method = models.CharField(max_length=20, choices=Method.choices, default=Method.RAZORPAY, db_index=True)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING, db_index=True)
     amount = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0)])
     processed_at = models.DateTimeField(blank=True, null=True)

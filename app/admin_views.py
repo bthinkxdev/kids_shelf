@@ -564,9 +564,7 @@ class OrderUpdateStatusView(StaffRequiredMixin, View):
             order.status = new_status
             order.save(update_fields=["status"])
             if new_status == Order.Status.DELIVERED:
-                if hasattr(order, 'payment') and order.payment.method in [
-                    Payment.Method.COD, Payment.Method.WHATSAPP
-                ]:
+                if hasattr(order, 'payment'):
                     if order.payment.status != Payment.Status.PAID:
                         order.payment.mark_paid()
             messages.success(request, f"Order status updated to {order.get_status_display()}.")

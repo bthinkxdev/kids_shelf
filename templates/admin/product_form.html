@@ -280,6 +280,20 @@
             </div>
         </div>
 
+        <div class="form-grid">
+            <div class="form-group">
+                <label class="form-label">Condition of Book</label>
+                <select class="form-control" id="basic-condition">
+                    <option value="new" selected>New</option>
+                    <option value="like_new">Preloved – Like New</option>
+                    <option value="very_good">Preloved – Very Good</option>
+                    <option value="good">Preloved – Good</option>
+                    <option value="acceptable">Preloved – Acceptable</option>
+                    <option value="damaged">Damaged/Reading Copy</option>
+                </select>
+            </div>
+        </div>
+
         {# Age Groups — rendered from form widget, chips style #}
         <div class="form-group">
             <label class="form-label">Age Groups <span class="opt">(leave empty = "All Ages")</span></label>
@@ -518,6 +532,7 @@ document.getElementById('btn-save-basic').addEventListener('click', function () 
         language:         (document.getElementById('basic-language').value || 'English').trim(),
         price:            document.getElementById('basic-price').value,
         original_price:   document.getElementById('basic-original_price').value || null,
+            condition:        (document.getElementById('basic-condition').value || 'new'),
         age_groups:       ageGroups,
         is_featured:      document.getElementById('basic-is_featured').checked,
         is_bestseller:    document.getElementById('basic-is_bestseller').checked,

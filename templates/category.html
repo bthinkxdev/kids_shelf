@@ -149,6 +149,9 @@
                                             <p class="product-category">{{ product.category.name }}</p>
                                             <h3 class="product-name">{{ product.name }}</h3>
                                             <p class="product-author">by {{ product.author }}</p>
+                                            {% if product.condition %}
+                                            <p class="product-author">Condition: {{ product.get_condition_display }}</p>
+                                            {% endif %}
                                             <div class="product-price">
                                                 {% if product.original_price and product.original_price > product.price %}
                                                     <span class="original-price">₹{{ product.original_price }}</span>

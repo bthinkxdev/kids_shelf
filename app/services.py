@@ -30,7 +30,7 @@ def send_order_notification_email(order, request=None):
         site_domain = getattr(settings, 'SITE_DOMAIN', 'https://kidsshelf.in')
         order_url = f"{site_domain}/dashboard/orders/{order.order_number}/"
 
-    payment_method = "Cash on Delivery"
+    payment_method = "Online Payment"
     if hasattr(order, 'payment'):
         payment_method = order.payment.get_method_display()
 
@@ -447,7 +447,7 @@ class OrderService:
 
         Payment.objects.create(
             order=order,
-            method=form_data.get("payment", Payment.Method.COD),
+            method=form_data.get("payment", Payment.Method.RAZORPAY),
             amount=totals.total,
         )
 

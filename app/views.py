@@ -351,6 +351,7 @@ class AddToCartView(View):
 
     def post(self, request, *args, **kwargs):
         is_ajax = request.headers.get("x-requested-with") == "XMLHttpRequest"
+        action = request.POST.get("action", "add")
         form = CartAddForm(request.POST)
         
         if not form.is_valid():
@@ -379,20 +380,26 @@ class AddToCartView(View):
             return redirect("store:product_detail", slug=product.slug)
 
         cart = CartService.get_or_create_cart(request)
-        
-        # Check if item already exists in cart
-        existing_item = CartItem.objects.filter(cart=cart, variant=book_format).first()
-        if existing_item:
-            if is_ajax:
-                cart_count = cart.items.count()
-                return JsonResponse({
-                    "success": False,
-                    "already_in_cart": True,
-                    "cart_count": cart_count,
-                    "error": f'"{product.name}" is already in your cart.',
-                }, status=200)
-            messages.info(request, f'"{product.name}" is already in your cart.')
-            return redirect("store:product_detail", slug=product.slug)
+
+        # For "Buy Now", treat this as a single-item checkout:
+        # clear existing items so checkout only contains this product.
+        if action == "buy":
+            cart.items.all().delete()
+            existing_item = None
+        else:
+            # For normal add-to-cart, prevent duplicate entries
+            existing_item = CartItem.objects.filter(cart=cart, variant=book_format).first()
+            if existing_item:
+                if is_ajax:
+                    cart_count = cart.items.count()
+                    return JsonResponse({
+                        "success": False,
+                        "already_in_cart": True,
+                        "cart_count": cart_count,
+                        "error": f'"{product.name}" is already in your cart.',
+                    }, status=200)
+                messages.info(request, f'"{product.name}" is already in your cart.')
+                return redirect("store:product_detail", slug=product.slug)
 
         try:
             CartService.add_item(cart, book_format, data["quantity"])
@@ -409,7 +416,6 @@ class AddToCartView(View):
                 })
             messages.success(request, "Added to cart.")
 
-        action = request.POST.get("action", "add")
         if action == "buy":
             return redirect("store:checkout")
         return redirect("store:cart")
